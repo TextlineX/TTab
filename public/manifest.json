@@ -1,0 +1,30 @@
+{
+  "manifest_version": 3,
+  "name": "TTab - 灵动书签",
+  "version": "0.1.0",
+  "description": "极简、高效、充满动感的现代化浏览器书签管理工具。",
+  "permissions": [
+    "bookmarks",
+    "storage",
+    "favicon"
+  ],
+  "action": {
+    "default_popup": "index.html",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
+  },
+  "chrome_url_overrides": {
+    "newtab": "index.html"
+  },
+  "icons": {
+    "16": "icons/icon16.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'; img-src 'self' https://images.unsplash.com https://www.google.com chrome-extension://*;"
+  }
+}
