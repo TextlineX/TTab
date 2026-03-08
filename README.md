@@ -1,73 +1,63 @@
-# React + TypeScript + Vite
+# TTab - 灵动书签仪表盘 🚀
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+[![Build and Release Extension](https://github.com/TextlineX/TTab/actions/workflows/release.yml/badge.svg)](https://github.com/TextlineX/TTab/actions/workflows/release.yml)
 
-Currently, two official plugins are available:
+TTab 是一款基于 Vite + React 开发的高性能、高交互浏览器插件。它不仅是一个书签管理器，更是一个充满工业美感与艺术气息的个人仪表盘。
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## ✨ 核心特性
 
-## React Compiler
+### 🧱 Windows 10 磁贴模式 (Start View)
+- **砖墙式拼合**：采用严格的 12 列网格算法，支持 1x1, 2x2, 4x2, 4x4 多种磁贴尺寸，像砌砖墙一样严丝合缝。
+- **Metro 工业美感**：彻底直角化、纯色块填充、大图标小标题，完美复刻 Windows 经典设计。
+- **智能色彩引擎**：根据图标颜色自动计算背景色，并具备“三段式”对冲算法，确保任何图标都能清晰显示。
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+### ☁️ 灵动词云模式 (Cloud View)
+- **有机权重布局**：标签根据权重（随机或文件夹深度）自动调整字号，形成中心放射状的有机布局。
+- **艺术级视觉**：支持随机旋转、毛玻璃模糊以及纯文字模式，将书签转化为跳动的现代艺术品。
 
-## Expanding the ESLint configuration
+### 🛠️ 深度自定义控制
+- **Workspace Root**：可以自由指定书签树的任何一个文件夹作为插件的“根目录”。
+- **动态容器**：支持自由调节最大显示列数（4-16列）以及容器总宽度。
+- **视觉主题**：内置多种高清壁纸，支持实时切换背景与粒子特效。
 
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
+### ⌨️ 硬核交互体验
+- **丝滑拖拽**：集成 `@dnd-kit`，支持磁贴的自由排序与位置同步。
+- **右键菜单**：精致的磨砂质感菜单，支持重命名（毛玻璃对话框）、删除、进入文件夹。
+- **多语言支持**：原生集成 i18n 系统，支持中文与英文自动匹配。
 
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
+## 🚀 技术栈
 
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
+- **构建工具**: [Vite](https://vitejs.dev/)
+- **UI 框架**: [React 19](https://react.dev/) + [TypeScript](https://www.typescriptlang.org/)
+- **样式方案**: [Tailwind CSS 4](https://tailwindcss.com/)
+- **动画/拖拽**: [Framer Motion](https://www.framer.com/motion/) + [@dnd-kit](https://dndkit.com/)
+- **图标库**: [Lucide React](https://lucide.dev/)
 
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+## 📦 安装与开发
+
+### 直接安装 (推荐)
+1. 前往 [Releases](https://github.com/TextlineX/TTab/releases) 下载最新的 `ttab-extension.zip` 并解压。
+2. 打开 Chrome 或 Edge 的扩展程序页面 (`edge://extensions/`)。
+3. 开启“开发人员模式”。
+4. 点击“加载解压后的扩展程序”，选中解压出的文件夹。
+
+### 本地开发
+```bash
+# 克隆项目
+git clone https://github.com/TextlineX/TTab.git
+
+# 安装依赖
+pnpm install
+
+# 启动开发环境
+pnpm dev
+
+# 编译打包
+pnpm build
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+## 📜 开源协议
+本项目采用 [MIT License](LICENSE) 开源。
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
-
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
-```
+---
+由 **Gemini CLI** 与 **TextlineX** 合作打造。
