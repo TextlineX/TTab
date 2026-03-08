@@ -3,7 +3,7 @@ name: Build and Release Extension
 on:
   push:
     tags:
-      - 'v*' # 当推送形如 v1.0.0 的 tag 时触发
+      - 'v*'
 
 jobs:
   build:
@@ -29,20 +29,29 @@ jobs:
       - name: Build Project
         run: pnpm build
 
-      - name: Package Extension
+      - name: Package Extension (Zip)
         run: |
           cd dist
           zip -r ../ttab-extension.zip .
           cd ..
 
+      - name: Package Extension (CRX)
+        run: |
+          # 使用 npx crx 工具进行打包
+          # 注意：这里我们生成一个临时的私钥。
+          # 如果你有固定的 .pem 密钥，建议将其存入 GitHub Secrets 并在此时引入。
+          npx crx pack dist -o ttab-extension.crx
+
       - name: Create GitHub Release
         id: create_release
         uses: softprops/action-gh-release@v1
         with:
-          files: ttab-extension.zip
+          files: |
+            ttab-extension.zip
+            ttab-extension.crx
           name: Release ${{ github.ref_name }}
           draft: false
           prerelease: false
-          generate_release_notes: true # 自动生成版本变化说明
+          generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
