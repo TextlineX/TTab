@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
-  Settings, X, Image as ImageIcon, Sparkles, Type, RotateCcw,
-  ChevronRight, FolderEdit, Globe, Maximize
+  Settings, X, Image as ImageIcon, Sparkles, Type,
+  ChevronRight, FolderEdit, Globe, Maximize, Languages, Hash
 } from 'lucide-react';
 import { storage } from '../../../utils/storage';
 import { getTranslation } from '../../../utils/i18n';
@@ -77,6 +77,25 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, onRefresh }) => 
             </div>
           </section>
 
+          {/* Section: Typography */}
+          <section className="flex flex-col gap-4">
+            <div className="flex items-center gap-2 text-orange-400/60 font-black uppercase text-[10px] tracking-widest">
+              <Languages size={14} /> <span>Typography</span>
+            </div>
+            <button 
+              onClick={() => update({ useCustomFont: !config.useCustomFont })}
+              className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${config.useCustomFont ? 'bg-orange-500/10 border-orange-500/30 text-orange-400' : 'bg-white/5 border-white/5 text-white/40'}`}
+            >
+              <div className="flex flex-col items-start gap-0.5">
+                <span className="text-xs font-bold uppercase tracking-widest">Xiaolai SC</span>
+                <span className="text-[8px] opacity-60">Personalized Typeface</span>
+              </div>
+              <div className={`w-8 h-4 rounded-full p-0.5 transition-colors ${config.useCustomFont ? 'bg-orange-500' : 'bg-white/10'}`}>
+                <div className={`w-3 h-3 rounded-full bg-white transition-transform ${config.useCustomFont ? 'translate-x-4' : 'translate-x-0'}`} />
+              </div>
+            </button>
+          </section>
+
           {/* Section: Layout Depth */}
           <section className="flex flex-col gap-4">
             <div className="flex items-center gap-2 text-blue-400/60 font-black uppercase text-[10px] tracking-widest">
@@ -90,7 +109,6 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, onRefresh }) => 
                 </div>
                 <input type="range" min="4" max="16" value={config.gridColumns} onChange={e => update({ gridColumns: parseInt(e.target.value) })} className="w-full accent-blue-500 h-1 bg-white/10 rounded-full appearance-none cursor-pointer" />
               </div>
-              
               <div className="flex flex-col gap-2">
                 <div className="flex justify-between items-center">
                   <span className="text-xs text-white/60">{t.containerWidth}</span>
@@ -107,25 +125,46 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, onRefresh }) => 
               <Sparkles size={14} /> <span>{t.cloudAesthetics}</span>
             </div>
             <div className="flex flex-col gap-3">
+              {/* Organic Tilt Toggle */}
               <button 
                 onClick={() => update({ tagRotation: !config.tagRotation })}
                 className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${config.tagRotation ? 'bg-purple-500/10 border-purple-500/30 text-purple-400' : 'bg-white/5 border-white/5 text-white/40'}`}
               >
-                <div className="flex items-center gap-3">
-                  <RotateCcw size={16} className={config.tagRotation ? 'animate-pulse' : ''} />
-                  <span className="text-xs font-bold uppercase tracking-widest">{t.organicTilt}</span>
-                </div>
+                <span className="text-xs font-bold uppercase tracking-widest">{t.organicTilt}</span>
                 <div className={`w-8 h-4 rounded-full p-0.5 transition-colors ${config.tagRotation ? 'bg-purple-500' : 'bg-white/10'}`}>
                   <div className={`w-3 h-3 rounded-full bg-white transition-transform ${config.tagRotation ? 'translate-x-4' : 'translate-x-0'}`} />
                 </div>
               </button>
 
+              {/* Tag Color Toggle */}
+              <button 
+                onClick={() => update({ tagColorMode: !config.tagColorMode })}
+                className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${config.tagColorMode !== false ? 'bg-pink-500/10 border-pink-500/30 text-pink-400' : 'bg-white/5 border-white/5 text-white/40'}`}
+              >
+                <span className="text-xs font-bold uppercase tracking-widest">{t.coloredTags}</span>
+                <div className={`w-8 h-4 rounded-full p-0.5 transition-colors ${config.tagColorMode !== false ? 'bg-pink-500' : 'bg-white/10'}`}>
+                  <div className={`w-3 h-3 rounded-full bg-white transition-transform ${config.tagColorMode !== false ? 'translate-x-4' : 'translate-x-0'}`} />
+                </div>
+              </button>
+
+              {/* Pure Text Mode Toggle */}
+              <button 
+                onClick={() => update({ pureTextMode: !config.pureTextMode })}
+                className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${config.pureTextMode ? 'bg-amber-500/10 border-amber-500/30 text-amber-400' : 'bg-white/5 border-white/5 text-white/40'}`}
+              >
+                <div className="flex items-center gap-2">
+                  <Hash size={14} className="opacity-40" />
+                  <span className="text-xs font-bold uppercase tracking-widest">{t.pureTextMode}</span>
+                </div>
+                <div className={`w-8 h-4 rounded-full p-0.5 transition-colors ${config.pureTextMode ? 'bg-amber-500' : 'bg-white/10'}`}>
+                  <div className={`w-3 h-3 rounded-full bg-white transition-transform ${config.pureTextMode ? 'translate-x-4' : 'translate-x-0'}`} />
+                </div>
+              </button>
+
+              {/* Max Font Size Slider */}
               <div className="p-4 rounded-2xl bg-white/5 border border-white/5 flex flex-col gap-4">
                 <div className="flex justify-between items-center text-white/60">
-                  <div className="flex items-center gap-3">
-                    <Type size={16} />
-                    <span className="text-xs font-bold uppercase tracking-widest">{t.maxFontSize}</span>
-                  </div>
+                  <div className="flex items-center gap-3"><Type size={16} /><span className="text-xs font-bold uppercase tracking-widest">{t.maxFontSize}</span></div>
                   <span className="text-xs font-bold text-purple-400">{config.tagMaxSize}px</span>
                 </div>
                 <input type="range" min="16" max="64" step="4" value={config.tagMaxSize} onChange={e => update({ tagMaxSize: parseInt(e.target.value) })} className="w-full accent-purple-500 h-1 bg-white/10 rounded-full appearance-none cursor-pointer" />
@@ -151,17 +190,13 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, onRefresh }) => 
           </section>
 
           {/* Visual Theme */}
-          <section className="flex flex-col gap-4">
+          <section className="flex flex-col gap-4 pb-10">
             <div className="flex items-center gap-2 text-pink-400/60 font-black uppercase text-[10px] tracking-widest">
               <ImageIcon size={14} /> <span>{t.visualTheme}</span>
             </div>
             <div className="grid grid-cols-2 gap-2">
               {PRESET_WALLPAPERS.map(wp => (
-                <button 
-                  key={wp.id}
-                  onClick={() => update({ wallpaper: wp.url })}
-                  className={`relative aspect-video rounded-xl overflow-hidden border-2 transition-all ${config.wallpaper === wp.url ? 'border-pink-500 scale-[0.98]' : 'border-white/5 opacity-60 hover:opacity-100'}`}
-                >
+                <button key={wp.id} onClick={() => update({ wallpaper: wp.url })} className={`relative aspect-video rounded-xl overflow-hidden border-2 transition-all ${config.wallpaper === wp.url ? 'border-pink-500 scale-[0.98]' : 'border-white/5 opacity-60 hover:opacity-100'}`}>
                   {wp.url ? <img src={wp.url} className="absolute inset-0 w-full h-full object-cover" /> : <div className="absolute inset-0 bg-gradient-to-br from-indigo-900 to-black" />}
                   <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
                     <span className="text-[8px] font-black text-white uppercase tracking-widest">{wp.name}</span>
@@ -171,23 +206,12 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, onRefresh }) => 
             </div>
           </section>
 
-          <button onClick={() => update({ pureTextMode: !config.pureTextMode })} className="flex items-center justify-between p-4 rounded-2xl bg-white/5 border border-white/5 hover:bg-white/10 transition-all">
-            <span className="text-xs font-bold uppercase tracking-widest text-white/60">{t.pureTextMode}</span>
-            <div className={`w-8 h-4 rounded-full p-0.5 transition-colors ${config.pureTextMode ? 'bg-amber-500' : 'bg-white/10'}`}><div className={`w-3 h-3 rounded-full bg-white transition-transform ${config.pureTextMode ? 'translate-x-4' : 'translate-x-0'}`} /></div>
-          </button>
-
         </div>
       </motion.div>
 
       <AnimatePresence>
         {isPickerOpen && (
-          <FolderPicker 
-            onClose={() => setIsPickerOpen(false)}
-            onSelect={(id) => {
-              update({ defaultFolderId: id });
-              setIsPickerOpen(false);
-            }}
-          />
+          <FolderPicker onClose={() => setIsPickerOpen(false)} onSelect={(id) => { update({ defaultFolderId: id }); setIsPickerOpen(false); }} />
         )}
       </AnimatePresence>
     </div>

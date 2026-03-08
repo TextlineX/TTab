@@ -39,8 +39,9 @@ export const storage = {
       tagRotation: true,
       tagMaxSize: 32,
       gridColumns: 10,
-      containerWidth: 960, // 新增：容器宽度
-      language: 'auto',    // 新增：多语言支持 (auto, zh, en)
+      containerWidth: 960,
+      language: 'auto',
+      useCustomFont: true,
       wallpaper: ''
     };
     const saved = await storage.get('app_settings');

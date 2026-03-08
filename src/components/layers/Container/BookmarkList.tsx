@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react';
-import { AnimatePresence } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
 import {
   DndContext,
   closestCenter,
@@ -25,7 +25,7 @@ import SettingsPanel from './SettingsPanel';
 import RenameModal from './RenameModal'; 
 import BackButton from './BackButton';
 import { SortableItem } from './SortableItem';
-import { LayoutGrid, Hash, Search, Settings as SettingsIcon } from 'lucide-react';
+import { LayoutGrid, Hash, Search, Settings as SettingsIcon, ChevronRight } from 'lucide-react';
 import { storage } from '../../../utils/storage';
 import { getTranslation } from '../../../utils/i18n';
 
@@ -119,49 +119,91 @@ const BookmarkList: React.FC = () => {
     large: 'col-span-4 row-span-4',
   };
 
-  if (loading) return null;
-
   const toggleDisplayMode = async (mode: DisplayMode) => {
     setDisplayMode(mode);
     await storage.updateSettings({ displayMode: mode });
   };
 
+  if (loading) return null;
+
   return (
-    <div className="flex flex-col gap-12 w-full animate-in fade-in duration-300">
+    <div className="flex flex-col gap-12 w-full animate-in fade-in duration-700">
       
       <BackButton canGoBack={path.length > 1} onClick={navigateBack} />
 
-      <div className="flex flex-col gap-6 w-full items-center">
-        <div className="flex items-center gap-1 overflow-x-auto py-1 px-4 border-b border-white/5 no-scrollbar max-w-xl">
+      {/* 现代化的控制面板入口 */}
+      <div className="flex flex-col gap-8 w-full items-center">
+        
+        {/* 1. 圆润的面包屑导航 */}
+        <div className="flex items-center gap-1.5 p-1.5 bg-white/5 backdrop-blur-2xl border border-white/10 rounded-full shadow-2xl max-w-2xl overflow-hidden px-4">
           {path.map((p, idx) => (
             <React.Fragment key={p.id}>
-              {idx > 0 && <span className="text-white/10 px-1">›</span>}
-              <button onClick={() => navigateTo(p.id)} className={`text-[10px] font-black uppercase tracking-[0.2em] py-1 px-2 transition-colors ${idx === path.length - 1 ? 'text-white border-b-2 border-white' : 'text-white/30 hover:text-white'}`}>
+              {idx > 0 && <ChevronRight size={14} className="text-white/20 shrink-0" />}
+              <motion.button 
+                whileHover={{ backgroundColor: 'rgba(255,255,255,0.08)' }}
+                whileTap={{ scale: 0.95 }}
+                onClick={() => navigateTo(p.id)} 
+                className={`text-[11px] font-bold uppercase tracking-wider py-2 px-4 rounded-full transition-all whitespace-nowrap ${
+                  idx === path.length - 1 
+                  ? 'text-white bg-blue-500/20 shadow-[0_0_15px_rgba(59,130,246,0.2)]' 
+                  : 'text-white/40 hover:text-white'
+                }`}
+              >
                 {p.id === rootId ? t.root : p.title}
-              </button>
+              </motion.button>
             </React.Fragment>
           ))}
         </div>
 
-        <div className="flex flex-col sm:flex-row justify-between items-center gap-6 w-full max-w-5xl px-4">
-          <div className="relative group w-full max-w-sm">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-white/20" size={16} />
-            <input type="text" placeholder={t.search} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full bg-white/5 border-none focus:bg-white/10 rounded-none py-2.5 pl-10 pr-4 text-xs text-white placeholder:text-white/10 outline-none" />
+        <div className="flex flex-col md:flex-row justify-between items-center gap-6 w-full max-w-5xl px-4">
+          
+          {/* 2. 圆润的搜索框 */}
+          <div className="relative group w-full max-w-md">
+            <div className="absolute inset-0 bg-blue-500/5 rounded-full blur-xl group-focus-within:bg-blue-500/10 transition-all opacity-0 group-focus-within:opacity-100" />
+            <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-white/20 group-focus-within:text-blue-400 transition-colors" size={18} />
+            <input 
+              type="text" 
+              placeholder={t.search} 
+              value={searchQuery} 
+              onChange={(e) => setSearchQuery(e.target.value)} 
+              className="relative w-full bg-white/5 backdrop-blur-xl border border-white/10 focus:border-blue-500/30 rounded-full py-3.5 pl-14 pr-6 text-sm text-white placeholder:text-white/20 outline-none transition-all shadow-inner" 
+            />
           </div>
 
-          <div className="flex items-center gap-0 bg-white/5 border border-white/5 p-0.5">
-            <button onClick={() => toggleDisplayMode('tile')} className={`flex items-center gap-2 px-4 py-2 transition-all ${displayMode === 'tile' ? 'bg-white/20 text-white' : 'text-white/30 hover:text-white'}`}>
-              <LayoutGrid size={14} />
-              <span className="text-[10px] font-black tracking-widest uppercase">{t.start}</span>
+          {/* 3. 现代化的切换开关 */}
+          <div className="flex items-center gap-1.5 bg-white/5 backdrop-blur-xl border border-white/10 p-1.5 rounded-full shadow-xl">
+            <button 
+              onClick={() => toggleDisplayMode('tile')} 
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-full transition-all duration-300 ${
+                displayMode === 'tile' 
+                ? 'bg-white text-black shadow-lg' 
+                : 'text-white/40 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <LayoutGrid size={16} strokeWidth={displayMode === 'tile' ? 2.5 : 2} />
+              <span className="text-[11px] font-black tracking-widest uppercase">{t.start}</span>
             </button>
-            <button onClick={() => toggleDisplayMode('tag')} className={`flex items-center gap-2 px-4 py-2 transition-all ${displayMode === 'tag' ? 'bg-white/20 text-white' : 'text-white/30 hover:text-white'}`}>
-              <Hash size={14} />
-              <span className="text-[10px] font-black tracking-widest uppercase">{t.cloud}</span>
+            <button 
+              onClick={() => toggleDisplayMode('tag')} 
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-full transition-all duration-300 ${
+                displayMode === 'tag' 
+                ? 'bg-white text-black shadow-lg' 
+                : 'text-white/40 hover:text-white hover:bg-white/5'
+              }`}
+            >
+              <Hash size={16} strokeWidth={displayMode === 'tag' ? 2.5 : 2} />
+              <span className="text-[11px] font-black tracking-widest uppercase">{t.cloud}</span>
             </button>
-            <div className="w-[1px] h-4 bg-white/10 mx-2" />
-            <button onClick={() => setIsSettingsOpen(true)} className="p-2 text-white/30 hover:text-white">
-              <SettingsIcon size={14} />
-            </button>
+            
+            <div className="w-[1px] h-6 bg-white/10 mx-2" />
+            
+            <motion.button 
+              whileHover={{ rotate: 45 }}
+              onClick={() => setIsSettingsOpen(true)} 
+              className="p-2.5 text-white/30 hover:text-blue-400 transition-colors"
+            >
+              <SettingsIcon size={18} />
+            </motion.button>
           </div>
         </div>
       </div>
@@ -175,7 +217,7 @@ const BookmarkList: React.FC = () => {
                   gridTemplateColumns: `repeat(${gridColumns}, minmax(0, 1fr))`,
                   maxWidth: `${containerWidth}px` 
                 }}
-                className="grid auto-rows-[60px] gap-1 grid-flow-dense w-full mx-auto"
+                className="grid auto-rows-[60px] gap-1.5 grid-flow-dense w-full mx-auto"
               >
                 {filteredItems.map((bm) => (
                   <SortableItem key={bm.id} id={bm.id} className={spanClasses[bm.size as keyof typeof spanClasses]}>
@@ -184,7 +226,7 @@ const BookmarkList: React.FC = () => {
                 ))}
               </div>
             ) : (
-              <div style={{ maxWidth: `${containerWidth}px` }} className="flex flex-wrap gap-4 justify-center items-center py-10 mx-auto">
+              <div style={{ maxWidth: `${containerWidth}px` }} className="flex flex-wrap gap-6 justify-center items-center py-10 mx-auto">
                 {filteredItems.map((bm) => (
                   <SortableItem key={bm.id} id={bm.id}>
                     <TagItem 
