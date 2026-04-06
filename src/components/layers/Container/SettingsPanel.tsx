@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Settings, X, Image as ImageIcon, Sparkles, Type,
-  ChevronRight, FolderEdit, Globe, Maximize, Languages, Hash
+  ChevronRight, FolderEdit, Globe, Maximize, Languages, Hash,
+  Upload, Trash2
 } from 'lucide-react';
 import { storage } from '../../../utils/storage';
 import { getTranslation } from '../../../utils/i18n';
@@ -24,6 +25,7 @@ const PRESET_WALLPAPERS = [
 const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, onRefresh }) => {
   const [config, setConfig] = useState<any>(null);
   const [isPickerOpen, setIsPickerOpen] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
 
   useEffect(() => {
     storage.getSettings().then(setConfig);
@@ -37,8 +39,30 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, onRefresh }) => 
     onRefresh();
   };
 
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // 检查文件大小 (限制为 4MB，虽然有 unlimitedStorage，但为了性能建议不要太大)
+    if (file.size > 4 * 1024 * 1024) {
+      alert(t.imageTooLarge);
+      return;
+    }
+
+    setIsUploading(true);
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const base64 = event.target?.result as string;
+      await update({ wallpaper: base64 });
+      setIsUploading(false);
+    };
+    reader.readAsDataURL(file);
+  };
+
   if (!config) return null;
   const t = getTranslation(config.language);
+
+  const isCustomWallpaper = config.wallpaper && !PRESET_WALLPAPERS.some(pw => pw.url === config.wallpaper);
 
   return (
     <div className="fixed inset-0 z-[100] flex justify-end">
@@ -80,7 +104,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, onRefresh }) => 
           {/* Section: Typography */}
           <section className="flex flex-col gap-4">
             <div className="flex items-center gap-2 text-orange-400/60 font-black uppercase text-[10px] tracking-widest">
-              <Languages size={14} /> <span>Typography</span>
+              <Languages size={14} /> <span>{t.typography}</span>
             </div>
             <button 
               onClick={() => update({ useCustomFont: !config.useCustomFont })}
@@ -88,7 +112,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, onRefresh }) => 
             >
               <div className="flex flex-col items-start gap-0.5">
                 <span className="text-xs font-bold uppercase tracking-widest">Xiaolai SC</span>
-                <span className="text-[8px] opacity-60">Personalized Typeface</span>
+                <span className="text-[8px] opacity-60">{t.personalizedTypeface}</span>
               </div>
               <div className={`w-8 h-4 rounded-full p-0.5 transition-colors ${config.useCustomFont ? 'bg-orange-500' : 'bg-white/10'}`}>
                 <div className={`w-3 h-3 rounded-full bg-white transition-transform ${config.useCustomFont ? 'translate-x-4' : 'translate-x-0'}`} />
@@ -191,12 +215,45 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, onRefresh }) => 
 
           {/* Visual Theme */}
           <section className="flex flex-col gap-4 pb-10">
-            <div className="flex items-center gap-2 text-pink-400/60 font-black uppercase text-[10px] tracking-widest">
-              <ImageIcon size={14} /> <span>{t.visualTheme}</span>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2 text-pink-400/60 font-black uppercase text-[10px] tracking-widest">
+                <ImageIcon size={14} /> <span>{t.visualTheme}</span>
+              </div>
+              <label className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full cursor-pointer transition-all group">
+                <Upload size={12} className="text-white/40 group-hover:text-pink-400" />
+                <span className="text-[9px] font-bold text-white/40 group-hover:text-white uppercase tracking-tighter">{t.upload}</span>
+                <input type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
+              </label>
             </div>
+
             <div className="grid grid-cols-2 gap-2">
+              {/* Custom Image Slot (Only if custom image exists) */}
+              {isCustomWallpaper && (
+                <div className="relative aspect-video rounded-xl overflow-hidden border-2 border-pink-500 group">
+                  <img src={config.wallpaper} className="absolute inset-0 w-full h-full object-cover" />
+                  <button 
+                    onClick={() => update({ wallpaper: '' })}
+                    className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <Trash2 size={16} className="text-red-400 mb-1" />
+                    <span className="text-[8px] font-black text-white uppercase tracking-widest">{t.remove}</span>
+                  </button>
+                </div>
+              )}
+
+              {/* Uploading Placeholder */}
+              {isUploading && (
+                <div className="aspect-video rounded-xl border-2 border-white/10 border-dashed animate-pulse flex items-center justify-center bg-white/5">
+                  <div className="w-4 h-4 border-2 border-pink-500/30 border-t-pink-500 rounded-full animate-spin" />
+                </div>
+              )}
+
               {PRESET_WALLPAPERS.map(wp => (
-                <button key={wp.id} onClick={() => update({ wallpaper: wp.url })} className={`relative aspect-video rounded-xl overflow-hidden border-2 transition-all ${config.wallpaper === wp.url ? 'border-pink-500 scale-[0.98]' : 'border-white/5 opacity-60 hover:opacity-100'}`}>
+                <button 
+                  key={wp.id} 
+                  onClick={() => update({ wallpaper: wp.url })} 
+                  className={`relative aspect-video rounded-xl overflow-hidden border-2 transition-all ${config.wallpaper === wp.url ? 'border-pink-500 scale-[0.98]' : 'border-white/5 opacity-60 hover:opacity-100'}`}
+                >
                   {wp.url ? <img src={wp.url} className="absolute inset-0 w-full h-full object-cover" /> : <div className="absolute inset-0 bg-gradient-to-br from-indigo-900 to-black" />}
                   <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
                     <span className="text-[8px] font-black text-white uppercase tracking-widest">{wp.name}</span>

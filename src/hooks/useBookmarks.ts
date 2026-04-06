@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { storage } from '../utils/storage';
+import { pinyinMatch } from '../utils/pinyinUtils';
 
 export interface PathNode {
   id: string;
@@ -10,10 +11,13 @@ export interface BookmarkNode extends chrome.bookmarks.BookmarkTreeNode {
   color?: string;
   size?: string;
   weight?: number;
+  parentTitle?: string;
 }
 
-export function useBookmarks() {
+export function useBookmarks(searchQuery: string = '') {
   const [bookmarks, setBookmarks] = useState<BookmarkNode[]>([]);
+  const [searchResults, setSearchResults] = useState<BookmarkNode[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
   const [loading, setLoading] = useState(true);
   const [currentFolderId, setCurrentFolderId] = useState<string>(''); 
   const [rootId, setRootId] = useState<string>('0');
@@ -28,6 +32,62 @@ export function useBookmarks() {
     };
     init();
   }, []);
+
+  // 全局搜索逻辑（支持拼音）
+  useEffect(() => {
+    if (!searchQuery.trim()) {
+      setSearchResults([]);
+      setIsSearching(false);
+      return;
+    }
+
+    const search = async () => {
+      setIsSearching(true);
+      if (typeof chrome !== 'undefined' && chrome.bookmarks) {
+        // 获取全量书签树并扁平化，以支持拼音匹配
+        chrome.bookmarks.getTree(async (tree) => {
+          const allItems: chrome.bookmarks.BookmarkTreeNode[] = [];
+          const flatten = (nodes: chrome.bookmarks.BookmarkTreeNode[]) => {
+            nodes.forEach(node => {
+              if (node.url) allItems.push(node);
+              if (node.children) flatten(node.children);
+            });
+          };
+          flatten(tree);
+
+          const colorCache = await storage.getColorCache();
+          
+          // 使用 pinyinMatch 进行过滤
+          const matched = allItems.filter(node => 
+            pinyinMatch(node.title, searchQuery) || (node.url && node.url.toLowerCase().includes(searchQuery.toLowerCase()))
+          );
+
+          // 取前 50 条并补充父文件夹信息
+          const limitedResults = matched.slice(0, 50);
+          const enriched = await Promise.all(limitedResults.map(async (node) => {
+            let parentTitle = '';
+            if (node.parentId) {
+              const parent = await new Promise<chrome.bookmarks.BookmarkTreeNode[]>((res) => 
+                chrome.bookmarks.get(node.parentId!, res)
+              );
+              parentTitle = parent[0]?.title || '';
+            }
+            return {
+              ...node,
+              color: node.url ? colorCache[node.url] : undefined,
+              parentTitle
+            };
+          }));
+
+          setSearchResults(enriched as BookmarkNode[]);
+          setIsSearching(false);
+        });
+      }
+    };
+
+    const timer = setTimeout(search, 300);
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
 
   const loadFolder = useCallback(async (folderId: string) => {
     if (folderId === undefined || folderId === '') return;
@@ -87,5 +147,16 @@ export function useBookmarks() {
     setCurrentFolderId(parentNode.id);
   };
 
-  return { bookmarks, setBookmarks, loading, currentFolderId, rootId, navigateTo, navigateBack, path };
+  return { 
+    bookmarks, 
+    setBookmarks, 
+    searchResults, 
+    isSearching, 
+    loading, 
+    currentFolderId, 
+    rootId, 
+    navigateTo, 
+    navigateBack, 
+    path 
+  };
 }

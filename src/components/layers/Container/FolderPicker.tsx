@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Folder, X, ChevronRight, ChevronLeft, CornerDownRight } from 'lucide-react';
+import { storage } from '../../../utils/storage';
+import { getTranslation } from '../../../utils/i18n';
 
 interface FolderPickerProps {
   onClose: () => void;
@@ -18,6 +20,13 @@ const FolderPicker: React.FC<FolderPickerProps> = ({ onClose, onSelect }) => {
   const [navPath, setNavPath] = useState<NavNode[]>([{ id: '0', title: 'Root' }]);
   const [loading, setLoading] = useState(true);
   const [confirming, setConfirming] = useState(false); // 控制“是/否”确认界面的显示
+  const [lang, setLang] = useState('auto');
+
+  useEffect(() => {
+    storage.getSettings().then(s => setLang(s.language || 'auto'));
+  }, []);
+
+  const t = getTranslation(lang);
 
   const loadSubFolders = (id: string) => {
     setLoading(true);
@@ -71,7 +80,7 @@ const FolderPicker: React.FC<FolderPickerProps> = ({ onClose, onSelect }) => {
         {/* Header: 弹窗内地址栏 */}
         <div className="p-6 border-b border-white/5 bg-white/5 flex flex-col gap-4">
           <div className="flex items-center justify-between">
-            <h2 className="text-white/40 font-black uppercase tracking-[0.2em] text-[10px]">Folder Explorer</h2>
+            <h2 className="text-white/40 font-black uppercase tracking-[0.2em] text-[10px]">{t.folderExplorer}</h2>
             <button onClick={onClose} className="p-2 hover:bg-white/10 rounded-full transition-all text-white/20"><X size={18} /></button>
           </div>
           
@@ -80,7 +89,7 @@ const FolderPicker: React.FC<FolderPickerProps> = ({ onClose, onSelect }) => {
               <React.Fragment key={p.id}>
                 {idx > 0 && <ChevronRight size={12} className="text-white/10 shrink-0" />}
                 <span className={`text-xs font-bold whitespace-nowrap ${idx === navPath.length - 1 ? 'text-blue-400' : 'text-white/40'}`}>
-                  {p.title}
+                  {p.id === '0' ? t.root : p.title}
                 </span>
               </React.Fragment>
             ))}
@@ -92,7 +101,7 @@ const FolderPicker: React.FC<FolderPickerProps> = ({ onClose, onSelect }) => {
           {navPath.length > 1 && (
             <button onClick={goBack} className="w-full flex items-center gap-4 p-4 hover:bg-white/5 rounded-2xl transition-all text-left text-white/40 group">
               <div className="p-2 bg-white/5 rounded-xl group-hover:bg-white/10 transition-all"><ChevronLeft size={18} /></div>
-              <span className="text-sm font-bold">Go Back</span>
+              <span className="text-sm font-bold">{t.goBack}</span>
             </button>
           )}
 
@@ -113,7 +122,7 @@ const FolderPicker: React.FC<FolderPickerProps> = ({ onClose, onSelect }) => {
             {!loading && subFolders.length === 0 && (
               <div className="py-10 flex flex-col items-center justify-center text-white/10 gap-2">
                 <Folder size={48} strokeWidth={1} />
-                <span className="text-xs font-bold uppercase tracking-widest">No Subfolders</span>
+                <span className="text-xs font-bold uppercase tracking-widest">{t.noSubfolders}</span>
               </div>
             )}
           </div>
@@ -130,7 +139,7 @@ const FolderPicker: React.FC<FolderPickerProps> = ({ onClose, onSelect }) => {
                 disabled={currentFolder.id === 'root'}
                 className="w-full py-4 bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 rounded-2xl font-black uppercase tracking-widest text-xs transition-all border border-blue-500/20"
               >
-                Set "{currentFolder.title}" as Root
+                {t.setAsRoot}: "{currentFolder.title}"
               </motion.button>
             ) : (
               <motion.div 
@@ -140,20 +149,20 @@ const FolderPicker: React.FC<FolderPickerProps> = ({ onClose, onSelect }) => {
               >
                 <div className="flex items-center gap-3 text-emerald-400 px-2">
                   <CornerDownRight size={16} />
-                  <span className="text-xs font-bold uppercase">Confirm this selection?</span>
+                  <span className="text-xs font-bold uppercase">{t.confirmSelection}</span>
                 </div>
                 <div className="flex gap-2">
                   <button 
                     onClick={() => setConfirming(false)}
                     className="flex-1 py-4 bg-white/5 hover:bg-white/10 text-white/40 rounded-2xl font-black uppercase tracking-widest text-xs transition-all"
                   >
-                    No / Cancel
+                    {t.noCancel}
                   </button>
                   <button 
                     onClick={() => onSelect(currentFolder.id, currentFolder.title)}
                     className="flex-1 py-4 bg-emerald-500 text-white rounded-2xl font-black uppercase tracking-widest text-xs transition-all shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:scale-[1.02]"
                   >
-                    Yes / Confirm
+                    {t.yesConfirm}
                   </button>
                 </div>
               </motion.div>

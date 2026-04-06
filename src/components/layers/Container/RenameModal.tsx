@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Type, Check, X } from 'lucide-react';
+import { storage } from '../../../utils/storage';
+import { getTranslation } from '../../../utils/i18n';
 
 interface RenameModalProps {
   isOpen: boolean;
@@ -11,7 +13,14 @@ interface RenameModalProps {
 
 const RenameModal: React.FC<RenameModalProps> = ({ isOpen, initialName, onClose, onSave }) => {
   const [name, setName] = useState(initialName);
+  const [lang, setLang] = useState('auto');
   const inputRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    storage.getSettings().then(s => setLang(s.language || 'auto'));
+  }, []);
+
+  const t = getTranslation(lang);
 
   useEffect(() => {
     if (isOpen) {
@@ -44,7 +53,7 @@ const RenameModal: React.FC<RenameModalProps> = ({ isOpen, initialName, onClose,
           <div className="p-2 bg-purple-500/10 rounded-xl text-purple-400">
             <Type size={18} />
           </div>
-          <h2 className="text-sm font-bold text-white uppercase tracking-widest">Rename Item</h2>
+          <h2 className="text-sm font-bold text-white uppercase tracking-widest">{t.renameItem}</h2>
         </div>
 
         <div className="relative group">
@@ -55,7 +64,7 @@ const RenameModal: React.FC<RenameModalProps> = ({ isOpen, initialName, onClose,
             onChange={(e) => setName(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && onSave(name)}
             className="w-full bg-white/5 border border-white/10 focus:border-purple-500/50 rounded-2xl py-3 px-4 text-white placeholder:text-white/20 outline-none transition-all focus:shadow-[0_0_20px_rgba(168,85,247,0.15)]"
-            placeholder="Enter new name..."
+            placeholder={t.enterNewName}
           />
         </div>
 
@@ -64,13 +73,13 @@ const RenameModal: React.FC<RenameModalProps> = ({ isOpen, initialName, onClose,
             onClick={onClose}
             className="flex-1 py-3 rounded-xl border border-white/10 hover:bg-white/5 text-white/60 hover:text-white text-xs font-bold transition-all flex items-center justify-center gap-2"
           >
-            <X size={14} /> Cancel
+            <X size={14} /> {t.cancel}
           </button>
           <button
             onClick={() => onSave(name)}
             className="flex-1 py-3 rounded-xl bg-purple-500/20 hover:bg-purple-500/30 border border-purple-500/30 text-purple-400 text-xs font-bold transition-all flex items-center justify-center gap-2"
           >
-            <Check size={14} /> Save
+            <Check size={14} /> {t.save}
           </button>
         </div>
       </motion.div>

@@ -1,6 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Edit2, Trash2, ExternalLink, Move } from 'lucide-react';
+import { storage } from '../../../utils/storage';
+import { getTranslation } from '../../../utils/i18n';
 
 interface ContextMenuProps {
   x: number;
@@ -15,6 +17,13 @@ interface ContextMenuProps {
 
 const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, title, onClose, onRename, onDelete, onOpen }) => {
   const [menuPos, setMenuPos] = useState({ left: x, top: y });
+  const [lang, setLang] = useState('auto');
+
+  useEffect(() => {
+    storage.getSettings().then(s => setLang(s.language || 'auto'));
+  }, []);
+
+  const t = getTranslation(lang);
 
   useEffect(() => {
     // 确保菜单不超出屏幕边界
@@ -47,25 +56,25 @@ const ContextMenu: React.FC<ContextMenuProps> = ({ x, y, title, onClose, onRenam
         {onOpen && (
           <button onClick={onOpen} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 text-white/80 hover:text-white transition-all group">
             <ExternalLink size={16} className="text-white/20 group-hover:text-blue-400" />
-            <span className="text-xs font-medium">Open</span>
+            <span className="text-xs font-medium">{t.open}</span>
           </button>
         )}
 
         <button onClick={onRename} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 text-white/80 hover:text-white transition-all group">
           <Edit2 size={16} className="text-white/20 group-hover:text-purple-400" />
-          <span className="text-xs font-medium">Rename</span>
+          <span className="text-xs font-medium">{t.rename}</span>
         </button>
 
         <button onClick={() => {}} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-white/5 text-white/80 hover:text-white transition-all group">
           <Move size={16} className="text-white/20 group-hover:text-amber-400" />
-          <span className="text-xs font-medium">Move To...</span>
+          <span className="text-xs font-medium">{t.move}</span>
         </button>
 
         <div className="h-[1px] bg-white/5 my-1" />
 
-        <button onClick={onDelete} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-red-500/10 text-red-400/80 hover:text-red-400 transition-all group">
+        <button onClick={() => { if(confirm(t.deleteConfirm)) onDelete(); }} className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-red-500/10 text-red-400/80 hover:text-red-400 transition-all group">
           <Trash2 size={16} className="text-red-400/30 group-hover:text-red-400" />
-          <span className="text-xs font-medium font-bold">Delete</span>
+          <span className="text-xs font-medium font-bold">{t.delete}</span>
         </button>
       </motion.div>
     </div>

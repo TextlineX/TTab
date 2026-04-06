@@ -32,7 +32,12 @@ import { getTranslation } from '../../../utils/i18n';
 type DisplayMode = 'tag' | 'tile';
 
 const BookmarkList: React.FC = () => {
-  const { bookmarks, setBookmarks, loading, navigateTo, navigateBack, path, rootId } = useBookmarks();
+  const [searchQuery, setSearchQuery] = useState('');
+  const { 
+    bookmarks, setBookmarks, searchResults, isSearching, 
+    loading, navigateTo, navigateBack, path, rootId 
+  } = useBookmarks(searchQuery);
+
   const [displayMode, setDisplayMode] = useState<DisplayMode>('tile');
   const [tagColorMode, setTagColorMode] = useState(true);
   const [pureTextMode, setPureTextMode] = useState(false);
@@ -43,7 +48,6 @@ const BookmarkList: React.FC = () => {
   const [lang, setLanguage] = useState('auto');
   
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
   const [contextMenu, setContextMenu] = useState<{ x: number; y: number; id: string; title: string; isFolder: boolean } | null>(null);
   const [renameData, setRenameData] = useState<{ isOpen: boolean; id: string; title: string }>({ isOpen: false, id: '', title: '' });
 
@@ -69,8 +73,11 @@ const BookmarkList: React.FC = () => {
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
   );
 
+  const isSearchingActive = searchQuery.trim().length > 0;
+  const currentItems = isSearchingActive ? searchResults : bookmarks;
+
   const enrichedItems = useMemo(() => {
-    return bookmarks.map((b, idx) => {
+    return currentItems.map((b, idx) => {
       let size: 'small' | 'medium' | 'wide' | 'large' = 'medium';
       if (!b.url) { 
         size = idx % 4 === 0 ? 'wide' : (idx % 7 === 0 ? 'large' : 'medium');
@@ -83,9 +90,12 @@ const BookmarkList: React.FC = () => {
       const weight = !b.url ? 0.7 + (idx % 3) * 0.1 : Math.random();
       return { ...b, size, weight };
     });
-  }, [bookmarks]);
+  }, [currentItems]);
+
+  const displayItems = enrichedItems;
 
   const handleDragEnd = (event: DragEndEvent) => {
+    if (isSearchingActive) return; // 搜索模式下禁止拖拽
     const { active, over } = event;
     if (over && active.id !== over.id) {
       const oldIndex = bookmarks.findIndex((b) => b.id === active.id);
@@ -102,15 +112,12 @@ const BookmarkList: React.FC = () => {
     if (!newName.trim()) return;
     if (typeof chrome !== 'undefined' && chrome.bookmarks) {
       chrome.bookmarks.update(renameData.id, { title: newName }, (updatedNode) => {
-        setBookmarks((prev) => prev.map((b) => b.id === renameData.id ? { ...b, title: updatedNode.title } : b));
+        const updateList = (list: any[]) => list.map((b) => b.id === renameData.id ? { ...b, title: updatedNode.title } : b);
+        setBookmarks(updateList);
       });
-    } else {
-      setBookmarks((prev) => prev.map((b) => b.id === renameData.id ? { ...b, title: newName } : b));
     }
     setRenameData({ isOpen: false, id: '', title: '' });
   };
-
-  const filteredItems = enrichedItems.filter((b) => b.title.toLowerCase().includes(searchQuery.toLowerCase()));
 
   const spanClasses = {
     small: 'col-span-1 row-span-1',
@@ -124,7 +131,7 @@ const BookmarkList: React.FC = () => {
     await storage.updateSettings({ displayMode: mode });
   };
 
-  if (loading) return null;
+  if (loading && !isSearchingActive) return null;
 
   return (
     <div className="flex flex-col gap-12 w-full animate-in fade-in duration-700">
@@ -135,7 +142,7 @@ const BookmarkList: React.FC = () => {
       <div className="flex flex-col gap-8 w-full items-center">
         
         {/* 1. 圆润的面包屑导航 */}
-        <div className="flex items-center gap-1.5 p-1.5 bg-white/5 backdrop-blur-2xl border border-white/10 rounded-full shadow-2xl max-w-2xl overflow-hidden px-4">
+        <div className="flex items-center gap-1.5 p-1.5 bg-white/5 backdrop-blur-2xl border border-white/10 rounded-full shadow-2xl max-w-2xl overflow-hidden px-4 transition-opacity duration-300" style={{ opacity: isSearchingActive ? 0.3 : 1 }}>
           {path.map((p, idx) => (
             <React.Fragment key={p.id}>
               {idx > 0 && <ChevronRight size={14} className="text-white/20 shrink-0" />}
@@ -160,7 +167,7 @@ const BookmarkList: React.FC = () => {
           {/* 2. 圆润的搜索框 */}
           <div className="relative group w-full max-w-md">
             <div className="absolute inset-0 bg-blue-500/5 rounded-full blur-xl group-focus-within:bg-blue-500/10 transition-all opacity-0 group-focus-within:opacity-100" />
-            <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-white/20 group-focus-within:text-blue-400 transition-colors" size={18} />
+            <Search className={`absolute left-5 top-1/2 -translate-y-1/2 transition-colors ${isSearching ? 'text-blue-400 animate-pulse' : 'text-white/20 group-focus-within:text-blue-400'}`} size={18} />
             <input 
               type="text" 
               placeholder={t.search} 
@@ -210,35 +217,46 @@ const BookmarkList: React.FC = () => {
 
       <DndContext sensors={sensors} collisionDetection={closestCenter} modifiers={[restrictToWindowEdges]} onDragEnd={handleDragEnd}>
         <div className="w-full flex justify-center px-4">
-          <SortableContext items={filteredItems.map(b => b.id)} strategy={rectSortingStrategy}>
-            {displayMode === 'tile' ? (
-              <div 
-                style={{ 
-                  gridTemplateColumns: `repeat(${gridColumns}, minmax(0, 1fr))`,
-                  maxWidth: `${containerWidth}px` 
-                }}
-                className="grid auto-rows-[60px] gap-1.5 grid-flow-dense w-full mx-auto"
-              >
-                {filteredItems.map((bm) => (
-                  <SortableItem key={bm.id} id={bm.id} className={spanClasses[bm.size as keyof typeof spanClasses]}>
-                    <TileItem id={bm.id} title={bm.title} url={bm.url} size={bm.size as any} onNavigate={navigateTo} onContextMenu={(e) => { e.preventDefault(); setContextMenu({ x: e.clientX, y: e.clientY, id: bm.id, title: bm.title, isFolder: !bm.url }); }} />
-                  </SortableItem>
-                ))}
-              </div>
+          <SortableContext items={displayItems.map(b => b.id)} strategy={rectSortingStrategy}>
+            {displayItems.length > 0 ? (
+              displayMode === 'tile' ? (
+                <div 
+                  style={{ 
+                    gridTemplateColumns: `repeat(${gridColumns}, minmax(0, 1fr))`,
+                    maxWidth: `${containerWidth}px` 
+                  }}
+                  className="grid auto-rows-[60px] gap-1.5 grid-flow-dense w-full mx-auto"
+                >
+                  {displayItems.map((bm) => (
+                    <SortableItem key={bm.id} id={bm.id} className={spanClasses[bm.size as keyof typeof spanClasses]}>
+                      <TileItem id={bm.id} title={bm.title} url={bm.url} size={bm.size as any} parentTitle={bm.parentTitle} onNavigate={navigateTo} onContextMenu={(e) => { e.preventDefault(); setContextMenu({ x: e.clientX, y: e.clientY, id: bm.id, title: bm.title, isFolder: !bm.url }); }} />
+                    </SortableItem>
+                  ))}
+                  </div>
+                  ) : (
+                  <div style={{ maxWidth: `${containerWidth}px` }} className="flex flex-wrap gap-6 justify-center items-center py-10 mx-auto">
+                  {displayItems.map((bm) => (
+                    <SortableItem key={bm.id} id={bm.id}>
+                      <TagItem 
+                        id={bm.id} title={bm.title} url={bm.url} 
+                        iconUrl={`chrome-extension://${chrome.runtime.id}/_favicon/?pageUrl=${encodeURIComponent(bm.url || '')}&size=128`} 
+                        themeColor={bm.color} showColor={tagColorMode} pureTextMode={pureTextMode} weight={bm.weight}
+                        maxFontSize={tagMaxSize} allowRotation={tagRotation}
+                        parentTitle={bm.parentTitle}
+                        onNavigate={navigateTo} onContextMenu={(e) => { e.preventDefault(); setContextMenu({ x: e.clientX, y: e.clientY, id: bm.id, title: bm.title, isFolder: !bm.url }); }}
+                      />
+                    </SortableItem>
+                  ))}                </div>
+              )
             ) : (
-              <div style={{ maxWidth: `${containerWidth}px` }} className="flex flex-wrap gap-6 justify-center items-center py-10 mx-auto">
-                {filteredItems.map((bm) => (
-                  <SortableItem key={bm.id} id={bm.id}>
-                    <TagItem 
-                      id={bm.id} title={bm.title} url={bm.url} 
-                      iconUrl={`chrome-extension://${chrome.runtime.id}/_favicon/?pageUrl=${encodeURIComponent(bm.url || '')}&size=128`} 
-                      themeColor={bm.color} showColor={tagColorMode} pureTextMode={pureTextMode} weight={bm.weight}
-                      maxFontSize={tagMaxSize} allowRotation={tagRotation}
-                      onNavigate={navigateTo} onContextMenu={(e) => { e.preventDefault(); setContextMenu({ x: e.clientX, y: e.clientY, id: bm.id, title: bm.title, isFolder: !bm.url }); }}
-                    />
-                  </SortableItem>
-                ))}
-              </div>
+              <motion.div 
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="flex flex-col items-center justify-center py-20 opacity-40"
+              >
+                <Search size={48} strokeWidth={1} className="mb-4" />
+                <p className="text-sm font-bold uppercase tracking-widest">{t.searchNoResults}</p>
+              </motion.div>
             )}
           </SortableContext>
         </div>

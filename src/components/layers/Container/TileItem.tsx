@@ -57,11 +57,12 @@ interface TileItemProps {
   url?: string;
   icon?: string;
   size?: 'small' | 'medium' | 'wide' | 'large';
+  parentTitle?: string; // 新增：父文件夹标题
   onNavigate?: (id: string) => void;
   onContextMenu: (e: React.MouseEvent) => void;
 }
 
-const TileItem: React.FC<TileItemProps> = ({ id, title, url, icon, size = 'medium', onNavigate, onContextMenu }) => {
+const TileItem: React.FC<TileItemProps> = ({ id, title, url, icon, size = 'medium', parentTitle, onNavigate, onContextMenu }) => {
   const hash = useMemo(() => id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0), [id]);
   const [rawThemeColor, setRawThemeColor] = useState<string>(WINDOWS_ACCENTS[hash % WINDOWS_ACCENTS.length]);
   const [iconError, setIconError] = useState(false);
@@ -133,7 +134,7 @@ const TileItem: React.FC<TileItemProps> = ({ id, title, url, icon, size = 'mediu
           )}
         </div>
 
-        <div className="w-full mt-auto text-left">
+        <div className="w-full mt-auto text-left flex flex-col gap-1">
           <span 
             style={{ color: text }}
             className={`font-bold uppercase block truncate tracking-tight leading-none ${
@@ -145,6 +146,14 @@ const TileItem: React.FC<TileItemProps> = ({ id, title, url, icon, size = 'mediu
           >
             {title}
           </span>
+          {parentTitle && (
+            <span 
+              style={{ color: text }}
+              className="text-[9px] opacity-40 font-bold uppercase tracking-tighter truncate"
+            >
+              📂 {parentTitle}
+            </span>
+          )}
         </div>
       </div>
       <div className={`absolute inset-0 ${text === 'white' ? 'bg-white/5' : 'bg-black/5'} opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none`} />
