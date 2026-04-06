@@ -1,7 +1,7 @@
 {
   "manifest_version": 4,
   "name": "TTab - 灵动书签",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "极简、高效、充满动感的现代化浏览器书签管理工具。",
   "permissions": [
     "bookmarks",

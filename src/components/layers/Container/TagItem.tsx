@@ -15,6 +15,7 @@ interface TagItemProps {
   weight?: number;
   maxFontSize?: number;
   allowRotation?: boolean;
+  parentTitle?: string;
   onNavigate?: (id: string) => void;
   onContextMenu: (e: React.MouseEvent) => void;
 }
@@ -31,7 +32,7 @@ const FOLDER_PALETTE = [
 const TagItem: React.FC<TagItemProps> = ({ 
   id, title, url, iconUrl, themeColor: initialColor, 
   showColor = true, pureTextMode = false, weight = 0.5,
-  maxFontSize = 32, allowRotation = true,
+  maxFontSize = 32, allowRotation = true, parentTitle,
   onNavigate, onContextMenu 
 }) => {
   // 文件夹采用随机预设色，书签采用提取色
@@ -88,7 +89,14 @@ const TagItem: React.FC<TagItemProps> = ({
           {isFolder ? <Folder className="text-blue-400/60" size={fontSize*0.5} /> : <img src={iconUrl} alt="" className="w-full h-full object-contain" />}
         </div>
       )}
-      <span style={{ color: textColor }} className="font-black tracking-tighter whitespace-nowrap drop-shadow-sm">{title}</span>
+      <div className="flex flex-col leading-none">
+        <span style={{ color: textColor }} className="font-black tracking-tighter whitespace-nowrap drop-shadow-sm">{title}</span>
+        {parentTitle && (
+          <span className="text-[10px] opacity-40 font-bold uppercase tracking-tighter mt-0.5">
+             {parentTitle}
+          </span>
+        )}
+      </div>
     </motion.div>
   );
 };
