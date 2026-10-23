@@ -2,6 +2,8 @@
 
 [![Build and Release Extension](https://github.com/TextlineX/TTab/actions/workflows/release.yml/badge.svg)](https://github.com/TextlineX/TTab/actions/workflows/release.yml)
 
+**当前版本：v0.5.0**
+
 TTab 是一款基于 Vite + React 开发的高性能、高交互浏览器插件。它不仅是一个书签管理器，更是一个充满工业美感与艺术气息的个人仪表盘。
 
 ## ✨ 0.5 新增：自动整理与小组件
