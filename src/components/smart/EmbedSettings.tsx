@@ -1,9 +1,12 @@
 import React, { useState } from 'react';
-import { Waypoints, Check } from 'lucide-react';
+import { Check, RefreshCw } from 'lucide-react';
 import { EMBED_PROVIDERS, defaultEmbedConfig, type EmbedConfig } from '../../core/vectors/embedApi';
 import { requestHostPermission, type AIConfig } from '../../core/ai/client';
 import { clearVectorStore } from '../../core/vectors/vectorStore';
 import { useVectorStatus } from '../../state/useSemantic';
+import { Group, Row, inputCls } from '../settings/parts';
+import Segmented from '../../ui/Segmented';
+import Button from '../../ui/Button';
 
 interface Props {
   value?: Partial<EmbedConfig>;
@@ -43,66 +46,69 @@ const EmbedSettings: React.FC<Props> = ({ value, chat, onSave }) => {
     void clearVectorStore().then(() => window.dispatchEvent(new Event('ttab_vectors_resync')));
   };
 
-  const input = 'w-full h-9 px-3 rounded-xl bg-white/5 border border-white/10 focus:border-[#7cc4ff]/60 outline-none text-xs text-white placeholder:text-white/30';
   const pct = Math.round(status.coverage * 100);
 
   return (
-    <section className="flex flex-col gap-4">
-      <div className="flex items-center gap-2 text-violet-300/80 text-[12px] font-bold">
-        <Waypoints size={14} /> <span>语义向量</span>
-      </div>
-      <p className="text-[11px] text-white/40 leading-relaxed -mt-2">用于"相关网页"、自动分组和"意思相近"搜索。本地向量无需配置；接入向量接口后能理解意思，比如搜"记账"也能找到"理财"类网页。</p>
-
-      <div className="grid grid-cols-2 gap-1.5">
-        {(['local', 'api'] as const).map(m => (
-          <button
-            key={m}
-            onClick={() => setMode(m)}
-            className={`h-9 rounded-xl text-[11px] border transition-colors ${cfg.mode === m ? 'bg-violet-400/15 border-violet-300/50 text-violet-200' : 'bg-white/5 border-white/5 text-white/50 hover:text-white'}`}
-          >{m === 'local' ? '仅本地（免费）' : '向量接口（更准）'}</button>
-        ))}
-      </div>
+    <div className="flex flex-col gap-7">
+      <Group desc="语义向量用于「相关网页」、自动分组和「意思相近」搜索。本地向量无需配置；接入向量接口后能理解意思，比如搜「记账」也能找到「理财」类网页。">
+        <Row label="向量来源">
+          <Segmented ariaLabel="向量来源" value={cfg.mode} onChange={setMode} options={[
+            { value: 'local', label: '仅本地（免费）' },
+            { value: 'api', label: '向量接口（更准）' },
+          ]} />
+        </Row>
+        <Row label="当前状态" desc={
+          <span className="flex flex-col gap-0.5">
+            <span>正在使用：{status.mode === 'api' ? '向量接口' : '本地向量'}</span>
+            {cfg.mode === 'api' && <span>已生成 {pct}% 的网页{pct < 80 && !status.syncing ? '（达到 80% 后自动切换到接口向量）' : ''}</span>}
+            {status.syncing && <span className="text-ai">正在生成 {status.syncing.done}/{status.syncing.total}……</span>}
+            {status.error && <span className="text-warn">{status.error}</span>}
+            {saved && !status.syncing && !status.error && cfg.mode === 'api' && <span>已保存，几秒后开始在后台生成。</span>}
+          </span>
+        }>
+          {cfg.mode === 'api' && <Button size="sm" variant="ghost" onClick={rebuild} icon={<RefreshCw size={14} />}>全部重新生成</Button>}
+        </Row>
+        {cfg.mode === 'api' && status.coverage > 0 && (
+          <div className="px-4 pb-4 -mt-1">
+            <div className="h-1.5 rounded-full bg-fill-2 overflow-hidden"><div className="h-full rounded-full bg-accent transition-[width] duration-500" style={{ width: `${pct}%` }} /></div>
+          </div>
+        )}
+      </Group>
 
       {cfg.mode === 'api' && (
         <>
-          <div className="grid grid-cols-3 gap-1.5">
-            {EMBED_PROVIDERS.map(p => (
-              <button
-                key={p.id}
-                onClick={() => pick(p.id)}
-                className={`h-8 rounded-lg text-[11px] border transition-colors ${cfg.provider === p.id ? 'bg-violet-400/15 border-violet-300/50 text-violet-200' : 'bg-white/5 border-white/5 text-white/50 hover:text-white'}`}
-              >{p.name}</button>
-            ))}
-          </div>
-          <label className="flex flex-col gap-1.5">
-            <span className="text-[11px] text-white/50">接口地址</span>
-            <input className={input} value={cfg.baseUrl} onChange={e => setCfg({ ...cfg, baseUrl: e.target.value.trim() })} placeholder="https://…/v1" />
-          </label>
-          <label className="flex flex-col gap-1.5">
-            <span className="text-[11px] text-white/50">向量模型</span>
-            <input className={input} value={cfg.model} onChange={e => setCfg({ ...cfg, model: e.target.value.trim() })} />
-          </label>
-          <label className="flex flex-col gap-1.5">
-            <span className="text-[11px] text-white/50">API Key</span>
-            <input className={input} type="password" autoComplete="off" value={cfg.apiKey} onChange={e => setCfg({ ...cfg, apiKey: e.target.value.trim() })}
-              placeholder={canReuseKey ? '留空则使用 AI 助手里的 Key' : preset?.needsKey ? 'sk-…' : '可不填'} />
-          </label>
-          {preset?.note && <p className="text-[11px] text-white/40">{preset.note}</p>}
-          <button onClick={save} disabled={!cfg.baseUrl || !cfg.model} className="h-10 rounded-xl bg-violet-300 text-[#1a1030] text-xs font-bold flex items-center justify-center gap-2 disabled:opacity-50">
-            <Check size={14} /> 保存，开始生成向量
-          </button>
+          <Group title="服务商">
+            <div className="p-3 grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {EMBED_PROVIDERS.map(p => {
+                const on = cfg.provider === p.id;
+                return (
+                  <button key={p.id} onClick={() => pick(p.id)} aria-pressed={on}
+                    className={`h-11 px-3 rounded-xl text-[13.5px] border flex items-center justify-between gap-2 transition-colors ${on ? 'bg-accent-soft border-[color:var(--accent-line)] text-fg' : 'border-line text-muted hover:text-fg hover:bg-fill-2'}`}>
+                    <span className="truncate">{p.name}</span>
+                    {on && <Check size={15} className="text-accent-text shrink-0" />}
+                  </button>
+                );
+              })}
+            </div>
+          </Group>
+          <Group title="连接">
+            <Row label="接口地址" stack>
+              <input className={inputCls} value={cfg.baseUrl} onChange={e => setCfg({ ...cfg, baseUrl: e.target.value.trim() })} placeholder="https://…/v1" />
+            </Row>
+            <Row label="向量模型" stack>
+              <input className={inputCls} value={cfg.model} onChange={e => setCfg({ ...cfg, model: e.target.value.trim() })} />
+            </Row>
+            <Row label="API Key" desc={preset?.note} stack>
+              <input className={inputCls} type="password" autoComplete="off" value={cfg.apiKey} onChange={e => setCfg({ ...cfg, apiKey: e.target.value.trim() })}
+                placeholder={canReuseKey ? '留空则使用 AI 助手里的 Key' : preset?.needsKey ? 'sk-…' : '可不填'} />
+            </Row>
+            <div className="px-4 py-3.5">
+              <Button variant="primary" onClick={save} disabled={!cfg.baseUrl || !cfg.model} icon={<Check size={15} />}>保存，开始生成向量</Button>
+            </div>
+          </Group>
         </>
       )}
-
-      <div className="p-3 rounded-xl bg-white/5 border border-white/5 text-[11px] text-white/55 leading-relaxed flex flex-col gap-1">
-        <span>当前使用：{status.mode === 'api' ? '向量接口' : '本地向量'}</span>
-        {cfg.mode === 'api' && <span>已生成：{pct}% 的网页{pct < 80 && !status.syncing ? '（达到 80% 后自动切换到接口向量）' : ''}</span>}
-        {status.syncing && <span className="text-violet-200">正在生成 {status.syncing.done}/{status.syncing.total}……</span>}
-        {status.error && <span className="text-[#f5b94a]">{status.error}</span>}
-        {saved && !status.syncing && !status.error && cfg.mode === 'api' && <span>已保存，几秒后开始在后台生成。</span>}
-        {cfg.mode === 'api' && <button onClick={rebuild} className="self-start mt-1 text-white/45 hover:text-white underline underline-offset-2">全部重新生成</button>}
-      </div>
-    </section>
+    </div>
   );
 };
 

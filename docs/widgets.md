@@ -80,7 +80,8 @@ const data = await ttab.fetchJSON('https://api.example.com/x')
 
 ### 样式
 
-- 可用主题变量：`var(--text)` `var(--muted)` `var(--ai)` `var(--warn)`；
+- 可用主题变量（会跟随用户的强调色和深色 / 浅色自动更新）：`var(--text)` `var(--muted)` `var(--faint)` `var(--accent)` `var(--accent-text)` `var(--accent-soft)` `var(--on-accent)` `var(--ai)` `var(--warn)` `var(--danger)` `var(--fill-1)` `var(--fill-2)` `var(--line)`；
+- 根元素带有当前明暗：`html[data-scheme="light"] .title { … }`；
 - 根元素带有当前尺寸：`html[data-size="l"] .chart { display: block; }`；
 - 小组件背景由 TTab 绘制（毛玻璃面板），页面本身是透明的。
 

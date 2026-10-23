@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Clock as ClockIcon } from 'lucide-react';
 import type { BuiltinWidget, WidgetProps, WidgetSettingsProps } from '../types';
+import Checkbox from '../../ui/Checkbox';
 
 interface Cfg { seconds: boolean; timeZone: string; label: string }
 
@@ -22,20 +23,20 @@ const ClockWidget: React.FC<WidgetProps<Cfg>> = ({ config, instance }) => {
   const big = instance.size !== 's';
   return (
     <div className="h-full flex flex-col items-center justify-center gap-1">
-      <span className={`tt-greet tabular-nums text-[color:var(--text)] ${big ? 'text-[44px]' : 'text-[32px]'} leading-none`}>{fmt(now, config)}</span>
-      <span className="text-[12px] text-[color:var(--muted)]">{config.label || fmtDate(now, config)}</span>
+      <span className={`tt-greet tabular-nums text-fg ${big ? 'text-[44px]' : 'text-[32px]'} leading-none`}>{fmt(now, config)}</span>
+      <span className="text-[12px] text-muted">{config.label || fmtDate(now, config)}</span>
     </div>
   );
 };
 
 const ClockSettings: React.FC<WidgetSettingsProps<Cfg>> = ({ config, setConfig }) => (
-  <div className="flex flex-col gap-3 text-[12px] text-[color:var(--muted)]">
-    <label className="flex items-center gap-2"><input type="checkbox" className="accent-sky-300" checked={config.seconds} onChange={e => setConfig({ seconds: e.target.checked })} />显示秒</label>
+  <div className="flex flex-col gap-3 text-[12px] text-muted">
+    <Checkbox checked={config.seconds} onChange={v => setConfig({ seconds: v })} label="显示秒" />
     <label className="flex flex-col gap-1.5">时区（留空用本机时区，例如 Asia/Shanghai、America/Los_Angeles）
-      <input value={config.timeZone} onChange={e => setConfig({ timeZone: e.target.value.trim() })} className="h-9 px-3 rounded-[10px] bg-white/8 border border-white/15 outline-none text-[13px] text-[color:var(--text)]" />
+      <input value={config.timeZone} onChange={e => setConfig({ timeZone: e.target.value.trim() })} className="h-9 px-3 rounded-[10px] bg-fill-2 border border-line-strong outline-none text-[13px] text-fg" />
     </label>
     <label className="flex flex-col gap-1.5">名称（例如"北京"，留空显示日期）
-      <input value={config.label} onChange={e => setConfig({ label: e.target.value })} className="h-9 px-3 rounded-[10px] bg-white/8 border border-white/15 outline-none text-[13px] text-[color:var(--text)]" />
+      <input value={config.label} onChange={e => setConfig({ label: e.target.value })} className="h-9 px-3 rounded-[10px] bg-fill-2 border border-line-strong outline-none text-[13px] text-fg" />
     </label>
   </div>
 );

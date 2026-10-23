@@ -15,7 +15,17 @@ interface Props {
   reloadKey?: number;
 }
 
-const THEME_VARS = ['--text', '--muted', '--ai', '--warn', '--panel', '--line'];
+const THEME_VARS = ['--text', '--muted', '--faint', '--accent', '--accent-text', '--accent-soft', '--on-accent', '--ai', '--warn', '--danger', '--fill-1', '--fill-2', '--line', '--surface', '--panel'];
+
+/** 当前主题：颜色变量 + 明暗（沙箱的 color-scheme 必须和页面一致，否则浏览器会给 iframe 画不透明底色） */
+function readTheme() {
+  const root = document.documentElement;
+  const css = getComputedStyle(root);
+  return {
+    theme: Object.fromEntries(THEME_VARS.map(v => [v, css.getPropertyValue(v).trim()])),
+    scheme: root.dataset.scheme === 'light' ? 'light' : 'dark',
+  };
+}
 
 /** 在沙箱 iframe 里运行自定义小组件，并作为它与 TTab 之间的唯一通道 */
 const WidgetFrame: React.FC<Props> = ({ def, instanceId, size, config, host, onError, reloadKey = 0 }) => {
@@ -34,10 +44,8 @@ const WidgetFrame: React.FC<Props> = ({ def, instanceId, size, config, host, onE
       const { def, config, size, host, instanceId, onError } = latest.current;
       const reply = (msg: Record<string, unknown>) => frame.contentWindow?.postMessage({ __ttab: 1, ...msg }, '*');
       if (m.type === 'ready') {
-        const css = getComputedStyle(document.documentElement);
-        const theme = Object.fromEntries(THEME_VARS.map(v => [v, css.getPropertyValue(v).trim()]));
         sentConfig.current = JSON.stringify(config);
-        reply({ type: 'init', def, config, size, theme, instanceId });
+        reply({ type: 'init', def, config, size, ...readTheme(), instanceId });
         setReady(true);
       } else if (m.type === 'error') {
         onError?.(m.message || '出错了');
@@ -69,15 +77,25 @@ const WidgetFrame: React.FC<Props> = ({ def, instanceId, size, config, host, onE
   const codeHash = fnv1a(`${def.html}\u0000${def.css}\u0000${def.js}`);
   useEffect(() => { if (ready) ref.current?.contentWindow?.postMessage({ __ttab: 1, type: 'size', size }, '*'); }, [size, ready]);
 
+  // 主题变化（换强调色、切换明暗）时同步给小组件
+  useEffect(() => {
+    if (!ready) return;
+    const ob = new MutationObserver(() => ref.current?.contentWindow?.postMessage({ __ttab: 1, type: 'theme', ...readTheme() }, '*'));
+    ob.observe(document.documentElement, { attributes: true, attributeFilter: ['style', 'data-scheme'] });
+    return () => ob.disconnect();
+  }, [ready]);
+  const scheme = typeof document !== 'undefined' && document.documentElement.dataset.scheme === 'light' ? 'light' : 'dark';
+
   return (
     <iframe
       ref={ref}
       // 代码变化时重新加载沙箱
       key={`${def.id}@${def.version}#${codeHash}:${reloadKey}`}
-      src="widget-sandbox.html"
+      src={`widget-sandbox.html#${scheme}`}
       sandbox="allow-scripts allow-forms"
       title={def.name}
       className="w-full h-full border-0 bg-transparent"
+      style={{ colorScheme: scheme }}
     />
   );
 };

@@ -1,161 +1,180 @@
 @import "tailwindcss";
 
+/* ------------------------------------------------------------------ */
+/* 字体                                                                 */
+/* public/ 下的文件构建后在扩展根目录，用绝对路径引用（相对路径在 assets/ 里会失效） */
+/* ------------------------------------------------------------------ */
 @font-face {
   font-family: 'Xiaolai SC';
-  /* 确保路径在 dist 中能找到 */
-  src: url('./fonts/XiaolaiSC-Regular.ttf') format('truetype');
+  src: url('/fonts/XiaolaiSC-Regular.ttf') format('truetype');
   font-weight: normal;
   font-style: normal;
   font-display: swap;
 }
 
+/* ------------------------------------------------------------------ */
+/* 语义色：变量由 src/theme/tokens.ts 按明暗和强调色生成                    */
+/* 用法：bg-surface text-fg text-muted border-line bg-accent text-on-accent */
+/* ------------------------------------------------------------------ */
+@theme inline {
+  --color-bg: var(--bg);
+  --color-surface: var(--surface);
+  --color-surface-solid: var(--surface-solid);
+  --color-raised: var(--raised);
+  --color-fill-1: var(--fill-1);
+  --color-fill-2: var(--fill-2);
+  --color-fill-3: var(--fill-3);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-fg: var(--text);
+  --color-muted: var(--muted);
+  --color-faint: var(--faint);
+  --color-accent: var(--accent);
+  --color-accent-text: var(--accent-text);
+  --color-accent-soft: var(--accent-soft);
+  --color-on-accent: var(--on-accent);
+  --color-ai: var(--ai);
+  --color-ai-soft: var(--ai-soft);
+  --color-on-ai: var(--on-ai);
+  --color-warn: var(--warn);
+  --color-warn-soft: var(--warn-soft);
+  --color-on-warn: var(--on-warn);
+  --color-danger: var(--danger);
+  --font-display: 'Xiaolai SC', var(--font-ui);
+  --ease-out-soft: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
 @layer base {
   :root {
-    --custom-font: 'Xiaolai SC', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-    --system-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    /* 首帧前的兜底值（深色），主题脚本运行后会覆盖 */
+    --bg: #0e1013; --surface: rgb(24 27 33 / 0.66); --surface-solid: #181b21; --raised: rgb(33 37 44 / 0.9); --raised-solid: #21252c;
+    --fill-1: rgb(255 255 255 / 0.05); --fill-2: rgb(255 255 255 / 0.08); --fill-3: rgb(255 255 255 / 0.13);
+    --line: rgb(255 255 255 / 0.09); --line-strong: rgb(255 255 255 / 0.2);
+    --text: #ecebe7; --muted: rgb(236 235 231 / 0.62); --faint: rgb(236 235 231 / 0.4);
+    --accent: #3fb6a8; --accent-text: #57c7b9; --accent-soft: rgb(63 182 168 / 0.18); --accent-line: rgb(63 182 168 / 0.45); --on-accent: #0b1a18;
+    --ai: #7cc4ff; --ai-soft: rgb(124 196 255 / 0.16); --on-ai: #0c1a26;
+    --warn: #f5b94a; --warn-soft: rgb(245 185 74 / 0.15); --on-warn: #2a1c02; --danger: #ff8a80;
+    --scrim: rgb(0 0 0 / 0.5);
+    --shadow: 0 18px 50px -18px rgb(0 0 0 / 0.65); --shadow-sm: 0 6px 18px -10px rgb(0 0 0 / 0.55);
+    --font-ui: -apple-system, BlinkMacSystemFont, "Segoe UI Variable Text", "Segoe UI", "PingFang SC", "Microsoft YaHei UI", "Microsoft YaHei", sans-serif;
+    color-scheme: dark;
   }
 
-  html { background: #0a0a0a; }
+  html { background: var(--bg); }
   body {
-    @apply m-0 min-h-screen bg-transparent text-white antialiased;
+    margin: 0;
+    min-height: 100vh;
+    background: transparent;
+    color: var(--text);
+    font-family: var(--font-ui);
+    -webkit-font-smoothing: antialiased;
+    font-feature-settings: "tnum" 0;
   }
+  html[data-font="all"] body { font-family: var(--font-display); }
+  button, input, textarea, select { font: inherit; color: inherit; }
+  ::selection { background: var(--accent-soft); }
 }
 
-/* 强制类名生效 */
-.font-custom {
-  font-family: var(--custom-font) !important;
-}
+/* 标题用手写体（设置里可关闭） */
+.tt-display { font-family: var(--font-ui); letter-spacing: 0.01em; }
+html[data-font="title"] .tt-display, html[data-font="all"] .tt-display { font-family: var(--font-display); letter-spacing: 0.03em; }
 
-.font-system {
-  font-family: var(--system-font) !important;
-}
-
-/* 滚动条及其它基础样式 */
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { @apply bg-transparent; }
-::-webkit-scrollbar-thumb { @apply bg-white/10 hover:bg-white/20 transition-colors; }
+/* 滚动条 */
+* { scrollbar-width: thin; scrollbar-color: var(--fill-3) transparent; }
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--fill-3); border-radius: 8px; border: 2px solid transparent; background-clip: padding-box; }
 *:focus { outline: none; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+input:focus-visible, textarea:focus-visible { outline: none; }
 
 /* ------------------------------------------------------------------ */
-/* 智能视图                                                             */
-/* 颜色语义：--ai 只用于 AI 相关操作；--warn 只用于会改动浏览器书签的提醒 */
+/* 背景                                                                 */
 /* ------------------------------------------------------------------ */
-:root {
-  --text: #f2f0eb;
-  --muted: rgb(242 240 235 / 0.56);
-  --panel: rgb(22 24 30 / 0.62);
-  --panel-solid: rgb(24 26 32 / 0.96);
-  --line: rgb(255 255 255 / 0.09);
-  --ai: #7cc4ff;
-  --warn: #f5b94a;
+.tt-aurora { background: var(--bg); }
+.tt-aurora-blob {
+  position: absolute;
+  width: 70vmax; height: 70vmax;
+  border-radius: 50%;
+  filter: blur(90px);
+  opacity: 0.32;
+  will-change: transform;
 }
-
-.tt-greet {
-  font-family: 'Xiaolai SC', var(--custom-font);
-  letter-spacing: 0.02em;
-  text-shadow: 0 2px 24px rgb(0 0 0 / 0.35);
+.tt-aurora-light .tt-aurora-blob { opacity: 0.55; filter: blur(110px); }
+.tt-aurora-a { background: var(--aurora-1); top: -38vmax; left: -18vmax; animation: tt-drift-a 46s ease-in-out infinite alternate; }
+.tt-aurora-b { background: var(--aurora-2); top: -30vmax; right: -28vmax; animation: tt-drift-b 58s ease-in-out infinite alternate; }
+.tt-aurora-c { background: var(--aurora-3); bottom: -46vmax; left: 18vw; opacity: 0.2; animation: tt-drift-c 64s ease-in-out infinite alternate; }
+.tt-aurora-light .tt-aurora-c { opacity: 0.4; }
+@keyframes tt-drift-a { to { transform: translate(14vw, 10vh) scale(1.08); } }
+@keyframes tt-drift-b { to { transform: translate(-12vw, 14vh) scale(0.94); } }
+@keyframes tt-drift-c { to { transform: translate(-10vw, -8vh) scale(1.1); } }
+.tt-grain {
+  opacity: 0.05;
+  pointer-events: none;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='160' height='160'><filter id='n'><feTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/></filter><rect width='100%' height='100%' filter='url(%23n)'/></svg>");
 }
+html[data-scheme="light"] .tt-grain { opacity: 0.035; }
 
-.tt-command {
-  background: var(--panel);
+/* ------------------------------------------------------------------ */
+/* 面板                                                                 */
+/* ------------------------------------------------------------------ */
+.tt-glass {
+  background: var(--surface);
   border: 1px solid var(--line);
-  backdrop-filter: blur(24px) saturate(140%);
-  box-shadow: 0 10px 40px -12px rgb(0 0 0 / 0.5);
+  backdrop-filter: blur(22px) saturate(150%);
+  -webkit-backdrop-filter: blur(22px) saturate(150%);
 }
-.tt-command-focus {
-  border-color: rgb(255 255 255 / 0.22);
-  box-shadow: 0 0 0 4px rgb(124 196 255 / 0.12), 0 14px 50px -12px rgb(0 0 0 / 0.6);
-}
-.tt-ai-btn {
-  color: #0c1a26;
-  background: var(--ai);
-}
-.tt-ai-btn:hover { filter: brightness(1.08); }
-
-.tt-quick {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  min-height: 30px;
-  padding: 5px 12px;
-  border-radius: 15px;
-  text-align: left;
-  font-size: 13px;
-  color: var(--muted);
-  background: rgb(255 255 255 / 0.04);
+.tt-raised {
+  background: var(--raised);
   border: 1px solid var(--line);
-  backdrop-filter: blur(12px);
-  transition: color .15s, border-color .15s;
-}
-.tt-quick:hover { color: var(--text); border-color: rgb(255 255 255 / 0.2); }
-.tt-quick-ai { color: var(--ai); border-color: rgb(124 196 255 / 0.3); }
-
-.tt-pop {
-  background: var(--panel-solid);
-  border: 1px solid rgb(255 255 255 / 0.12);
-  box-shadow: 0 20px 60px -10px rgb(0 0 0 / 0.65);
-  backdrop-filter: blur(24px);
+  box-shadow: var(--shadow);
+  backdrop-filter: blur(24px) saturate(150%);
+  -webkit-backdrop-filter: blur(24px) saturate(150%);
 }
 
-.tt-grid { grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); }
-
+/* 卡片：悬停轻微抬起 */
 .tt-card {
-  background: var(--panel);
-  border: 1px solid transparent;
-  backdrop-filter: blur(18px);
-}
-.tt-card:hover { background: rgb(34 37 45 / 0.72); border-color: var(--line); }
-.tt-card:focus-visible { outline: 2px solid var(--ai); outline-offset: 2px; }
-.tt-card-selected { border-color: rgb(124 196 255 / 0.55); background: rgb(30 44 58 / 0.7); }
-
-/* 我的组合：实心面板；推荐组合：虚线边，表示"还没保存，只是建议" */
-.tt-collection {
-  background: var(--panel);
+  background: var(--surface);
   border: 1px solid var(--line);
-  backdrop-filter: blur(18px);
+  backdrop-filter: blur(18px) saturate(140%);
+  transition: background-color .18s, border-color .18s, transform .2s var(--ease-out-soft), box-shadow .2s;
 }
-.tt-combo {
-  background: rgb(22 24 30 / 0.35);
-  border: 1px dashed rgb(255 255 255 / 0.18);
-  backdrop-filter: blur(18px);
-}
-.tt-collection:hover, .tt-combo:hover { border-color: rgb(255 255 255 / 0.24); }
-.tt-collection-on { border: 1px solid var(--text) !important; }
-.tt-shelf-row { scrollbar-width: thin; }
+.tt-card:hover { background: var(--raised); border-color: var(--line-strong); transform: translateY(-1px); box-shadow: var(--shadow-sm); }
+.tt-card-selected, .tt-card-selected:hover { border-color: var(--accent-line); background: color-mix(in srgb, var(--accent) 12%, var(--surface-solid)); }
 
-.tt-drawer {
-  background: var(--panel-solid);
-  border-left: 1px solid var(--line);
-  box-shadow: -20px 0 60px -20px rgb(0 0 0 / 0.6);
-}
-.tt-plan {
-  background: var(--panel-solid);
-  border: 1px solid rgb(255 255 255 / 0.12);
-  box-shadow: 0 30px 80px -20px rgb(0 0 0 / 0.7);
-}
+/* 密度 */
+.tt-grid { grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); }
+html[data-density="compact"] .tt-grid { grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); }
+.tt-grid-icons { grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); }
+.tt-masonry { columns: 300px; column-gap: 14px; }
+html[data-density="compact"] .tt-masonry { columns: 260px; }
+.tt-masonry > * { break-inside: avoid; margin-bottom: 14px; }
 
-button:focus-visible, a:focus-visible, [role="button"]:focus-visible, .tt-drawer input:focus-visible {
-  outline: 2px solid var(--ai);
-  outline-offset: 2px;
-}
+/* 侧边栏 */
+.tt-sidebar { width: 264px; }
+.tt-sidebar-collapsed { width: 68px; }
 
-@media (prefers-reduced-motion: reduce) {
-  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
-}
-
-/* ------------------------------------------------------------------ */
-/* 小组件                                                               */
-/* ------------------------------------------------------------------ */
+/* 小组件 */
 .tt-widget-grid { grid-auto-rows: 132px; grid-auto-flow: dense; }
-.tt-widget {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  backdrop-filter: blur(18px);
-}
-.tt-widget-editing { cursor: grab; border-style: dashed; border-color: rgb(255 255 255 / 0.25); }
+.tt-widget { background: var(--surface); border: 1px solid var(--line); backdrop-filter: blur(18px) saturate(140%); }
+.tt-widget-editing { cursor: grab; border-style: dashed; border-color: var(--line-strong); }
 .tt-preview-stage {
-  background:
-    radial-gradient(circle at 20% 10%, rgb(80 90 160 / 0.35), transparent 60%),
-    linear-gradient(160deg, #141826, #0b0c10);
+  background: radial-gradient(circle at 20% 10%, var(--accent-soft), transparent 60%), var(--bg);
   border: 1px solid var(--line);
 }
+
+/* 兼容旧类名（仍有组件使用） */
+.tt-greet { font-family: var(--font-display); letter-spacing: 0.03em; }
+.tt-pop, .tt-plan, .tt-drawer { background: var(--raised); border: 1px solid var(--line); box-shadow: var(--shadow); backdrop-filter: blur(24px) saturate(150%); }
+
+/* 跟随系统"减少动态效果" */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+  .tt-aurora-blob { animation: none !important; }
+}
+
+/* 滑块 */
+.tt-slider { -webkit-appearance: none; appearance: none; height: 6px; border-radius: 6px; cursor: pointer; }
+.tt-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; border-radius: 50%; background: #fff; border: 0; box-shadow: 0 1px 4px rgb(0 0 0 / 0.35), 0 0 0 4px var(--accent-soft); transition: transform .15s; }
+.tt-slider::-webkit-slider-thumb:hover { transform: scale(1.12); }
+.tt-slider::-moz-range-thumb { width: 18px; height: 18px; border-radius: 50%; background: #fff; border: 0; box-shadow: 0 1px 4px rgb(0 0 0 / 0.35); }

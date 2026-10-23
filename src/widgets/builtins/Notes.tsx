@@ -22,7 +22,7 @@ const NotesWidget: React.FC<WidgetProps> = ({ instance }) => {
       }}
       placeholder="随手记点什么……"
       aria-label="便签"
-      className="w-full h-full resize-none bg-transparent outline-none p-3 text-[13px] leading-relaxed text-[color:var(--text)] placeholder:text-[color:var(--muted)]"
+      className="w-full h-full resize-none bg-transparent outline-none p-3 text-[13px] leading-relaxed text-fg placeholder:text-muted"
     />
   );
 };

@@ -4,11 +4,10 @@ TTab 是一个基于 **React 19** 和 **Vite 8** 构建的高级书签管理器�
 
 ## 1. 核心层级结构 (Layer Architecture)
 
-UI 逻辑分为三个主要图层，定义在 `src/components/layers/`：
+UI 逻辑分为两个主要图层，定义在 `src/components/layers/`：
 
-- **BackgroundLayer**: 负责动态背景（如毛玻璃效果、渐变、甚至是用户自定义壁纸）。
+- **BackgroundLayer**: 负责背景（极光 / 纯色 / 图片 / 必应每日），颜色来自 `src/theme` 生成的主题变量。
 - **ContainerLayer**: UI 的核心容器，承载所有功能性内容。
-- **EffectLayer**: 负责全局性的视觉特效（如转场、动画覆盖）。
 
 ## 2. 数据管理 (Data Flow)
 

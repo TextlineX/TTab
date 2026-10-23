@@ -23,8 +23,8 @@ export const TEMPLATES: { id: string; label: string; def: CustomWidgetDef }[] = 
       css: `.wrap { height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; }
 #time { font-size: 34px; font-variant-numeric: tabular-nums; }
 .row { display: flex; gap: 6px; }
-button { background: rgba(255,255,255,.1); color: var(--text); border: 0; border-radius: 8px; padding: 4px 12px; cursor: pointer; }
-button:hover { background: rgba(255,255,255,.18); }
+button { background: var(--fill-2); color: var(--text); border: 0; border-radius: 8px; padding: 4px 12px; cursor: pointer; }
+button:hover { background: var(--accent-soft); }
 #done { font-size: 11px; color: var(--muted); }`,
       js: `const $ = id => document.getElementById(id);
 let left = (ttab.config.minutes || 25) * 60, timer = null;
@@ -67,7 +67,7 @@ show(); refreshDone();`,
 .hint, #meta { font-size: 11px; color: var(--muted); }
 #title { color: var(--text); font-size: 15px; text-decoration: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 #title:hover { text-decoration: underline; }
-button { align-self: flex-start; margin-top: 4px; background: rgba(255,255,255,.1); color: var(--text); border: 0; border-radius: 8px; padding: 2px 10px; cursor: pointer; font-size: 12px; }`,
+button { align-self: flex-start; margin-top: 4px; background: var(--line); color: var(--text); border: 0; border-radius: 8px; padding: 2px 10px; cursor: pointer; font-size: 12px; }`,
       js: `let current = null;
 async function pick() {
   const list = await ttab.bookmarks.list({ sort: 'random', limit: 1, tag: ttab.config.tag || undefined });

@@ -1,6 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { motion } from 'framer-motion';
-import { X, FolderInput, FolderPlus, Sparkles, Loader2, AlertTriangle, Undo2, History, ChevronRight } from 'lucide-react';
+import { FolderInput, FolderPlus, Sparkles, Loader2, Undo2, History, ChevronRight } from 'lucide-react';
+import Modal from '../../ui/Modal';
+import Button from '../../ui/Button';
+import Checkbox from '../../ui/Checkbox';
+import Segmented from '../../ui/Segmented';
+import Select from '../../ui/Select';
 import type { FolderRecord, LibraryItem } from '../../core/types';
 import type { VectorIndex } from '../../core/vectors/semantic';
 import { defaultOrganizeOptions, groupMoves, planOrganize, type OrganizeOptions, type OrganizePlan } from '../../core/organize/organizer';
@@ -76,135 +80,128 @@ const OrganizePanel: React.FC<Props> = ({ items, folders, index, ai, onClose, no
     setLogs([...(await loadLogs())].reverse());
   };
 
-  const seg = (on: boolean) => `h-8 px-3 rounded-[10px] text-[12px] border transition-colors ${on ? 'bg-white/12 border-white/25 text-[color:var(--text)]' : 'border-white/10 text-[color:var(--muted)] hover:text-[color:var(--text)]'}`;
+  const footer = tab === 'plan' ? (
+    <>
+      <p className="mr-auto text-[12.5px] text-muted leading-relaxed">
+        {plan ? <>将移动 <b className="text-fg">{chosen.length}</b> 个书签{newFolderCount ? `，新建 ${newFolderCount} 个文件夹` : ''}{plan.unresolved ? `；${plan.unresolved} 个没找到合适位置，保持不动` : ''}</> : ' '}
+      </p>
+      <Button variant="ghost" onClick={onClose}>取消</Button>
+      <Button variant="warn" onClick={() => void run()} disabled={!chosen.length || !!busy}
+        icon={busy === 'running' ? <Loader2 size={15} className="animate-spin" /> : <FolderInput size={15} />}>
+        移动 {chosen.length} 个书签
+      </Button>
+    </>
+  ) : undefined;
 
   return (
-    <div className="fixed inset-0 z-[95] flex items-start justify-center pt-[6vh] px-4">
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="absolute inset-0 bg-black/55" />
-      <motion.div
-        initial={{ opacity: 0, y: -8 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -8 }}
-        className="tt-plan relative w-full max-w-[720px] max-h-[86vh] rounded-[20px] flex flex-col overflow-hidden"
-        role="dialog" aria-label="整理书签"
-      >
-        <header className="flex items-start gap-3 p-5 pb-3">
-          <FolderInput size={20} className="mt-0.5 text-[color:var(--warn)]" />
-          <div className="flex-1 min-w-0">
-            <h2 className="text-[16px] text-[color:var(--text)]">整理书签</h2>
-            <p className="text-[12px] text-[color:var(--muted)] mt-0.5 leading-relaxed">把书签放进合适的文件夹。会修改浏览器里的真实书签：执行前可以逐个取消，执行后可以整次撤销。</p>
-          </div>
-          <div className="flex gap-1">
-            <button className={seg(tab === 'plan')} onClick={() => setTab('plan')}>整理方案</button>
-            <button className={seg(tab === 'history')} onClick={() => setTab('history')}><History size={12} className="inline -mt-0.5 mr-1" />整理记录</button>
-          </div>
-          <button onClick={onClose} aria-label="关闭" className="p-1.5 rounded-lg hover:bg-white/10 text-[color:var(--muted)]"><X size={16} /></button>
-        </header>
-
-        {tab === 'plan' ? (
-          <>
-            <div className="flex flex-wrap items-center gap-x-4 gap-y-2 px-5 pb-3 text-[12px] text-[color:var(--muted)]">
-              <span className="flex items-center gap-1.5">范围
-                <button className={seg(opts.scope === 'loose')} onClick={() => setOpts({ ...opts, scope: 'loose' })}>只整理散落的</button>
-                <button className={seg(opts.scope === 'all')} onClick={() => setOpts({ ...opts, scope: 'all' })}>也检查放错的</button>
-              </span>
-              <label className="flex items-center gap-1.5 cursor-pointer">
-                <input type="checkbox" className="accent-sky-300" checked={opts.allowNewFolders} onChange={e => setOpts({ ...opts, allowNewFolders: e.target.checked })} />
-                允许新建文件夹，放在
-                <select
-                  value={opts.newFolderParentId}
-                  onChange={e => setOpts({ ...opts, newFolderParentId: e.target.value })}
-                  className="h-7 px-2 rounded-lg bg-white/8 border border-white/15 text-[color:var(--text)] outline-none"
-                >
-                  {roots.map(f => <option key={f.id} value={f.id} className="bg-[#1b1d23]">{f.title}</option>)}
-                </select>
-              </label>
-              <span className="flex items-center gap-1.5">方式
-                <button className={seg(!useAI)} onClick={() => setUseAI(false)}>本地分析</button>
-                <button className={seg(useAI)} onClick={() => setUseAI(true)} disabled={!aiReady} title={aiReady ? '' : '在设置里配置 AI 后可用'}>
-                  <Sparkles size={11} className="inline -mt-0.5 mr-1" />AI 规划
-                </button>
-              </span>
-              {useAI && (
-                <button onClick={generate} disabled={busy === 'planning'} className="h-8 px-3 rounded-[10px] text-[12px] bg-[color:var(--ai)] text-[#0c1a26] disabled:opacity-60">
-                  {busy === 'planning' ? <Loader2 size={12} className="inline animate-spin" /> : '让 AI 生成方案'}
-                </button>
-              )}
+    <Modal
+      title="整理书签"
+      subtitle="把书签放进合适的文件夹。会修改浏览器里的真实书签：执行前可以逐个取消，执行后可以整次撤销。"
+      icon={<span className="w-9 h-9 rounded-xl bg-warn-soft text-warn flex items-center justify-center"><FolderInput size={18} /></span>}
+      onClose={onClose}
+      width={780}
+      bare
+      footer={footer}
+      headerExtra={
+        <Segmented size="sm" ariaLabel="整理视图" value={tab} onChange={setTab} options={[
+          { value: 'plan', label: '整理方案' },
+          { value: 'history', label: '整理记录', icon: <History size={13} /> },
+        ]} />
+      }
+    >
+      {tab === 'plan' ? (
+        <>
+          <div className="mx-6 mb-3 p-3 rounded-2xl bg-fill-1 border border-line grid gap-3 sm:grid-cols-2">
+            <div className="flex flex-col gap-1.5">
+              <span className="text-[12px] text-muted">范围</span>
+              <Segmented size="sm" full ariaLabel="整理范围" value={opts.scope} onChange={scope => setOpts({ ...opts, scope })} options={[
+                { value: 'loose', label: '只整理散落的' },
+                { value: 'all', label: '也检查放错的' },
+              ]} />
             </div>
-
-            <div className="flex-1 overflow-y-auto px-3 pb-2 border-t border-white/8">
-              {error && <p className="m-3 text-[13px] text-[color:var(--warn)]">{error}</p>}
-              {busy === 'planning' && <p className="m-6 text-center text-[13px] text-[color:var(--muted)]"><Loader2 size={14} className="inline animate-spin mr-2" />正在分析……</p>}
-              {plan && !busy && groups.length === 0 && (
-                <p className="m-8 text-center text-[13px] text-[color:var(--muted)] leading-relaxed">
-                  {plan.candidates === 0 ? '没有散落的书签，已经很整齐了。' : `检查了 ${plan.candidates} 个书签，没有找到把握足够的去处。可以试试"AI 规划"，或先给书签打上标签。`}
-                </p>
-              )}
-              {groups.map(g => {
-                const ids = g.moves.map(m => m.bookmarkId);
-                const all = ids.every(id => checked.has(id));
-                return (
-                  <section key={g.target} className="mt-3">
-                    <label className="flex items-center gap-2 px-2 py-1.5 cursor-pointer">
-                      <input type="checkbox" className="accent-sky-300" checked={all} onChange={e => toggle(ids, e.target.checked)} />
-                      {g.isNew ? <FolderPlus size={14} className="text-[color:var(--warn)]" /> : <FolderInput size={14} className="text-[color:var(--muted)]" />}
-                      <span className="text-[13px] text-[color:var(--text)]">{g.target}</span>
-                      {g.isNew && <span className="text-[11px] px-1.5 rounded bg-[color:var(--warn)]/15 text-[color:var(--warn)]">新建</span>}
-                      <span className="text-[12px] text-[color:var(--muted)]">{g.moves.length} 个</span>
-                    </label>
-                    <ul className="flex flex-col">
-                      {g.moves.map(m => (
-                        <li key={m.bookmarkId}>
-                          <label className="flex items-center gap-2.5 pl-8 pr-2 py-1.5 rounded-[10px] hover:bg-white/5 cursor-pointer">
-                            <input type="checkbox" className="accent-sky-300" checked={checked.has(m.bookmarkId)} onChange={e => toggle([m.bookmarkId], e.target.checked)} />
-                            {faviconUrl(m.url, 32) ? <img src={faviconUrl(m.url, 32)} alt="" className="w-4 h-4" /> : <span className="w-4 h-4 rounded bg-white/10 text-[9px] leading-4 text-center text-[color:var(--muted)]">{m.title[0]}</span>}
-                            <span className="truncate text-[13px] text-[color:var(--text)] flex-1">{m.title}</span>
-                            <span className="shrink-0 text-[11px] text-[color:var(--muted)] flex items-center gap-1">
-                              {m.fromPath.slice(-1)[0] || '根目录'} <ChevronRight size={10} /> {m.reason}
-                            </span>
-                          </label>
-                        </li>
-                      ))}
-                    </ul>
-                  </section>
-                );
-              })}
-            </div>
-
-            <footer className="flex items-center gap-3 p-4 border-t border-white/8">
-              <p className="flex-1 text-[12px] text-[color:var(--muted)] leading-relaxed">
-                {plan ? <>将移动 <b className="text-[color:var(--text)]">{chosen.length}</b> 个书签{newFolderCount ? `，新建 ${newFolderCount} 个文件夹` : ''}{plan.unresolved ? `；${plan.unresolved} 个没找到合适位置，保持不动` : ''}</> : ' '}
-              </p>
-              <button onClick={onClose} className="h-9 px-4 rounded-[10px] text-[14px] text-[color:var(--muted)] hover:bg-white/8">取消</button>
-              <button
-                onClick={run}
-                disabled={!chosen.length || !!busy}
-                className="h-9 px-4 rounded-[10px] text-[14px] bg-[color:var(--warn)] text-[#2a1c02] disabled:opacity-40 flex items-center gap-1.5"
-              >
-                {busy === 'running' ? <Loader2 size={14} className="animate-spin" /> : <AlertTriangle size={14} />} 移动 {chosen.length} 个书签
-              </button>
-            </footer>
-          </>
-        ) : (
-          <div className="flex-1 overflow-y-auto p-3 border-t border-white/8">
-            {!logs.length && <p className="m-8 text-center text-[13px] text-[color:var(--muted)]">还没有整理记录。</p>}
-            {logs.map(l => (
-              <div key={l.id} className="flex items-start gap-3 px-3 py-3 rounded-[12px] hover:bg-white/5">
-                <span className={`mt-0.5 text-[11px] px-1.5 rounded ${l.kind === 'auto' ? 'bg-sky-400/15 text-sky-200' : 'bg-white/10 text-[color:var(--muted)]'}`}>{l.kind === 'auto' ? '自动' : '手动'}</span>
-                <div className="flex-1 min-w-0">
-                  <p className="text-[13px] text-[color:var(--text)]">
-                    {new Date(l.at).toLocaleString()}：移动了 {l.moves.length} 个书签{l.createdFolders.length ? `，新建 ${l.createdFolders.length} 个文件夹` : ''}
-                    {l.undone && <span className="ml-2 text-[color:var(--muted)]">（已撤销）</span>}
-                  </p>
-                  <p className="text-[12px] text-[color:var(--muted)] truncate">{l.moves.slice(0, 4).map(m => `${m.title} → ${m.toTitle}`).join('；')}{l.moves.length > 4 ? '……' : ''}</p>
-                </div>
-                {!l.undone && (
-                  <button onClick={() => undo(l.id)} className="shrink-0 h-8 px-3 rounded-[10px] text-[12px] bg-white/10 hover:bg-white/15 text-[color:var(--text)] flex items-center gap-1"><Undo2 size={12} /> 撤销</button>
+            <div className="flex flex-col gap-1.5">
+              <span className="text-[12px] text-muted">方式</span>
+              <div className="flex items-center gap-2">
+                <Segmented size="sm" full ariaLabel="整理方式" value={useAI ? 'ai' : 'local'} onChange={v => setUseAI(v === 'ai' && aiReady)} options={[
+                  { value: 'local', label: '本地分析' },
+                  { value: 'ai', label: 'AI 规划', icon: <Sparkles size={12} />, title: aiReady ? '' : '在设置里配置 AI 后可用' },
+                ]} />
+                {useAI && (
+                  <Button size="sm" variant="ai" onClick={() => void generate()} disabled={busy === 'planning'}
+                    icon={busy === 'planning' ? <Loader2 size={13} className="animate-spin" /> : undefined}>生成方案</Button>
                 )}
               </div>
-            ))}
+            </div>
+            <div className="sm:col-span-2 flex flex-wrap items-center gap-2">
+              <Checkbox checked={opts.allowNewFolders} onChange={v => setOpts({ ...opts, allowNewFolders: v })} label="允许新建文件夹" />
+              {opts.allowNewFolders && roots.length > 0 && (
+                <>
+                  <span className="text-[13px] text-muted">放在</span>
+                  <Select size="sm" ariaLabel="新文件夹的位置" value={opts.newFolderParentId} onChange={v => setOpts({ ...opts, newFolderParentId: v })}
+                    options={roots.map(f => ({ value: f.id, label: f.title }))} minWidth={160} />
+                </>
+              )}
+            </div>
           </div>
-        )}
-      </motion.div>
-    </div>
+
+          <div className="px-4 pb-4 border-t border-line">
+            {error && <p className="m-3 text-[13px] text-warn">{error}</p>}
+            {busy === 'planning' && <p className="m-8 text-center text-[13px] text-muted"><Loader2 size={15} className="inline animate-spin mr-2" />正在分析……</p>}
+            {plan && !busy && groups.length === 0 && (
+              <p className="m-10 text-center text-[13.5px] text-muted leading-relaxed">
+                {plan.candidates === 0 ? '没有散落的书签，已经很整齐了。' : `检查了 ${plan.candidates} 个书签，没有找到把握足够的去处。可以试试「AI 规划」，或先给书签打上标签。`}
+              </p>
+            )}
+            {groups.map(g => {
+              const ids = g.moves.map(m => m.bookmarkId);
+              const n = ids.filter(id => checked.has(id)).length;
+              return (
+                <section key={g.target} className="mt-3 rounded-2xl border border-line overflow-hidden">
+                  <label className="flex items-center gap-2.5 px-3 py-2.5 bg-fill-1 cursor-pointer">
+                    <Checkbox checked={n === ids.length} indeterminate={n > 0 && n < ids.length} onChange={v => toggle(ids, v)} ariaLabel={`选择 ${g.target}`} />
+                    {g.isNew ? <FolderPlus size={15} className="text-warn" /> : <FolderInput size={15} className="text-muted" />}
+                    <span className="text-[13.5px] font-medium text-fg truncate">{g.target}</span>
+                    {g.isNew && <span className="text-[11px] px-1.5 py-0.5 rounded-md bg-warn-soft text-warn">新建</span>}
+                    <span className="ml-auto text-[12px] text-muted">{n}/{g.moves.length}</span>
+                  </label>
+                  <ul className="flex flex-col py-1">
+                    {g.moves.map(m => (
+                      <li key={m.bookmarkId}>
+                        <label className="flex items-center gap-2.5 px-3 py-1.5 hover:bg-fill-1 cursor-pointer">
+                          <Checkbox checked={checked.has(m.bookmarkId)} onChange={v => toggle([m.bookmarkId], v)} ariaLabel={m.title} />
+                          {faviconUrl(m.url, 32) ? <img src={faviconUrl(m.url, 32)} alt="" className="w-4 h-4 shrink-0" /> : <span className="w-4 h-4 shrink-0 rounded bg-fill-2 text-[9px] leading-4 text-center text-muted">{m.title[0]}</span>}
+                          <span className="truncate text-[13px] text-fg flex-1">{m.title}</span>
+                          <span className="hidden sm:flex shrink-0 max-w-[45%] text-[11.5px] text-faint items-center gap-1 truncate">
+                            {m.fromPath.slice(-1)[0] || '根目录'} <ChevronRight size={11} /> {m.reason}
+                          </span>
+                        </label>
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              );
+            })}
+          </div>
+        </>
+      ) : (
+        <div className="px-4 pb-4 border-t border-line">
+          {!logs.length && <p className="m-10 text-center text-[13.5px] text-muted">还没有整理记录。</p>}
+          {logs.map(l => (
+            <div key={l.id} className="flex items-start gap-3 px-3 py-3 mt-1 rounded-xl hover:bg-fill-1">
+              <span className={`mt-0.5 text-[11px] px-1.5 py-0.5 rounded-md ${l.kind === 'auto' ? 'bg-accent-soft text-accent-text' : 'bg-fill-2 text-muted'}`}>{l.kind === 'auto' ? '自动' : '手动'}</span>
+              <div className="flex-1 min-w-0">
+                <p className="text-[13px] text-fg">
+                  {new Date(l.at).toLocaleString()}：移动了 {l.moves.length} 个书签{l.createdFolders.length ? `，新建 ${l.createdFolders.length} 个文件夹` : ''}
+                  {l.undone && <span className="ml-2 text-muted">（已撤销）</span>}
+                </p>
+                <p className="text-[12px] text-muted truncate">{l.moves.slice(0, 4).map(m => `${m.title} → ${m.toTitle}`).join('；')}{l.moves.length > 4 ? '……' : ''}</p>
+              </div>
+              {!l.undone && <Button size="sm" onClick={() => void undo(l.id)} icon={<Undo2 size={13} />}>撤销</Button>}
+            </div>
+          ))}
+        </div>
+      )}
+    </Modal>
   );
 };
 

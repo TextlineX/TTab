@@ -1,5 +1,10 @@
 import React, { useState, useEffect } from 'react';
-import { Bookmark, Check, ChevronRight } from 'lucide-react';
+import { AnimatePresence, motion } from 'framer-motion';
+import { Bookmark, ChevronRight } from 'lucide-react';
+import Select from '../ui/Select';
+import { fade, pop, spring } from '../ui/motion';
+import { useSettings } from '../state/useSettings';
+import { useTheme } from '../theme/useTheme';
 import { storage } from '../utils/storage';
 import { loadMeta, saveMeta } from '../core/metaStore';
 import { addTags, markTagged } from '../core/library';
@@ -8,10 +13,12 @@ import { inferRuleTags, suggestFromVocabulary } from '../core/ruleTagger';
 import { tagChipStyle } from './smart/tagColor';
 
 const PopupApp: React.FC = () => {
-  const [title, setTitle] = useState('Loading...');
+  const { settings } = useSettings();
+  useTheme(settings?.appearance, settings?.wallpaper);
+  const [title, setTitle] = useState('');
   const [url, setUrl] = useState('');
-  const [folders, setFolders] = useState<{id: string, title: string}[]>([]);
-  const [selectedFolder, setSelectedFolder] = useState({ id: '1', title: 'Bookmarks Bar' });
+  const [folders, setFolders] = useState<{ id: string; title: string; path: string[] }[]>([]);
+  const [selectedFolder, setSelectedFolder] = useState({ id: '1', title: '收藏夹栏' });
   const [isSaved, setIsSaved] = useState(false);
   const [tags, setTags] = useState<string[]>([]);
   const [suggested, setSuggested] = useState<string[]>([]);
@@ -41,20 +48,7 @@ const PopupApp: React.FC = () => {
     setTagDraft('');
   };
 
-  const applyFont = async () => {
-    const settings = await storage.getSettings();
-    if (settings.useCustomFont !== false) {
-      document.body.classList.add('font-custom');
-      document.body.classList.remove('font-system');
-    } else {
-      document.body.classList.add('font-system');
-      document.body.classList.remove('font-custom');
-    }
-  };
-
   useEffect(() => {
-    applyFont();
-
     if (typeof chrome !== 'undefined' && chrome.tabs) {
       chrome.tabs.query({ active: true, currentWindow: true }, (tabs) => {
         if (tabs[0]) {
@@ -64,17 +58,18 @@ const PopupApp: React.FC = () => {
       });
 
       chrome.bookmarks.getTree((nodes) => {
-        const all: {id: string, title: string}[] = [];
-        const walk = (list: chrome.bookmarks.BookmarkTreeNode[]) => {
+        const all: { id: string; title: string; path: string[] }[] = [];
+        const walk = (list: chrome.bookmarks.BookmarkTreeNode[], path: string[]) => {
           list.forEach(n => {
             if (!n.url) {
-              all.push({ id: n.id, title: n.title || 'Folder' });
-              if (n.children) walk(n.children);
+              const p = [...path, n.title || '文件夹'];
+              all.push({ id: n.id, title: n.title || '文件夹', path: p });
+              if (n.children) walk(n.children, p);
             }
           });
         };
-        if (nodes && nodes[0]) walk(nodes[0].children || []);
-        setFolders(all.filter(f => f.id !== '0').slice(0, 10));
+        if (nodes && nodes[0]) walk(nodes[0].children || [], []);
+        setFolders(all.filter(f => f.id !== '0'));
       });
     }
 
@@ -104,79 +99,77 @@ const PopupApp: React.FC = () => {
     }
   };
 
-  return (
-    <div 
-      style={{ width: '350px', height: '540px' }} 
-      className={`bg-[#0a0a0a] text-white flex flex-col overflow-hidden border border-white/10`}
-    >
-      {isSaved ? (
-        <div className="flex-1 flex flex-col items-center justify-center gap-4 animate-in fade-in zoom-in duration-300">
-          <div className="w-16 h-16 bg-emerald-500 flex items-center justify-center">
-            <Check size={40} className="text-white" strokeWidth={3} />
-          </div>
-          <p className="text-white font-black uppercase tracking-widest text-sm text-center px-4">Saved Successfully</p>
-        </div>
-      ) : (
-        <>
-          <div className="p-4 bg-[#0078D4] flex items-center gap-3 shrink-0">
-            <Bookmark className="text-white" size={20} />
-            <h1 className="text-white font-black uppercase tracking-tighter text-sm">Quick Add</h1>
-          </div>
+  const inputCls = 'w-full h-10 px-3 rounded-xl bg-fill-1 border border-line focus:border-[color:var(--accent-line)] outline-none text-[13.5px] text-fg placeholder:text-faint transition-colors';
 
-          <div className="p-5 flex flex-col gap-6 flex-1">
-            <div className="flex flex-col gap-4">
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-black text-white/30 uppercase tracking-widest">Name</label>
-                <input 
-                  value={title} 
-                  onChange={e => setTitle(e.target.value)}
-                  className="w-full bg-white/5 border border-white/10 p-3 text-xs text-white outline-none focus:border-[#0078D4] transition-all"
-                />
+  return (
+    <div style={{ width: 360, minHeight: 480 }} className="relative overflow-hidden bg-[color:var(--bg)] text-fg flex flex-col">
+      <div aria-hidden className="pointer-events-none absolute -top-24 -right-16 w-64 h-64 rounded-full blur-3xl opacity-60" style={{ background: 'var(--accent-soft)' }} />
+      <AnimatePresence mode="wait" initial={false}>
+        {isSaved ? (
+          <motion.div key="ok" variants={pop} initial="hidden" animate="show" exit="exit" className="flex-1 flex flex-col items-center justify-center gap-4 py-24">
+            <span className="w-16 h-16 rounded-full bg-accent text-on-accent flex items-center justify-center">
+              <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                <motion.path d="M5 12.5 10 17 19 7" initial={{ pathLength: 0 }} animate={{ pathLength: 1 }} transition={{ duration: 0.35, delay: 0.1 }} />
+              </svg>
+            </span>
+            <p className="text-[15px] text-fg">已收藏{tags.length ? `，带 ${tags.length} 个标签` : ''}</p>
+          </motion.div>
+        ) : (
+          <motion.div key="form" variants={fade} initial="hidden" animate="show" exit="exit" className="relative flex-1 flex flex-col gap-5 p-5">
+            <header className="flex items-center gap-3">
+              <span className="w-9 h-9 rounded-xl bg-accent-soft text-accent-text flex items-center justify-center"><Bookmark size={18} /></span>
+              <div className="min-w-0">
+                <h1 className="text-[16px] font-semibold text-fg tt-display">收藏到 TTab</h1>
+                <p className="text-[12px] text-muted truncate max-w-[260px]">{url ? getDomain(url) : '…'}</p>
               </div>
-              <div className="flex flex-col gap-1.5">
-                <label className="text-[10px] font-black text-white/30 uppercase tracking-widest">Target Folder</label>
-                <div className="grid grid-cols-2 gap-2 max-h-[180px] overflow-y-auto pr-1 no-scrollbar">
-                  {folders.map(f => (
-                    <button 
-                      key={f.id}
-                      onClick={() => { setSelectedFolder(f); setFolderPath([f.title]); }}
-                      className={`px-3 py-2.5 text-[10px] font-bold border transition-all truncate text-left ${selectedFolder.id === f.id ? 'bg-[#0078D4] border-[#0078D4] text-white' : 'bg-white/5 border-white/10 text-white/40 hover:text-white'}`}
-                    >
-                      {f.id === '1' ? 'Bar' : f.id === '2' ? 'Other' : f.title}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
+            </header>
+
+            <label className="flex flex-col gap-1.5">
+              <span className="text-[12.5px] text-muted">名称</span>
+              <input value={title} onChange={e => setTitle(e.target.value)} className={inputCls} />
+            </label>
+
             <div className="flex flex-col gap-1.5">
-              <label className="text-[10px] font-black text-white/30 uppercase tracking-widest">Tags</label>
+              <span className="text-[12.5px] text-muted">放到文件夹</span>
+              <Select
+                ariaLabel="放到文件夹"
+                className="w-full"
+                value={selectedFolder.id}
+                searchAt={6}
+                onChange={id => { const f = folders.find(x => x.id === id); if (f) { setSelectedFolder({ id: f.id, title: f.title }); setFolderPath(f.path); } }}
+                options={folders.map(f => ({ value: f.id, label: f.title, hint: f.path.length > 1 ? f.path.slice(0, -1).join(' / ') : undefined }))}
+              />
+            </div>
+
+            <div className="flex flex-col gap-2">
+              <span className="text-[12.5px] text-muted">标签 <span className="text-faint">· 点击选择或取消</span></span>
               <div className="flex flex-wrap gap-1.5">
                 {suggested.map(t => (
-                  <button
-                    key={t}
+                  <motion.button
+                    key={t} layout transition={spring.snappy}
                     onClick={() => toggleTag(t)}
+                    aria-pressed={tags.includes(t)}
                     style={tagChipStyle(t, tags.includes(t) ? 'solid' : 'ghost')}
-                    className="px-2 h-6 rounded-full border text-[11px]"
-                  >{t}</button>
+                    className="px-2.5 h-7 rounded-full border text-[12.5px]"
+                  >{tags.includes(t) ? '✓ ' : ''}{t}</motion.button>
                 ))}
                 <input
                   value={tagDraft}
                   onChange={e => setTagDraft(e.target.value)}
                   onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addDraft(); } }}
                   onBlur={addDraft}
-                  placeholder="+ 标签"
-                  className="w-20 h-6 px-2 bg-white/5 border border-white/10 text-[11px] text-white outline-none focus:border-[#0078D4]"
+                  placeholder="+ 新标签"
+                  className="w-24 h-7 px-2.5 rounded-full bg-fill-1 border border-dashed border-line-strong focus:border-[color:var(--accent-line)] text-[12.5px] text-fg outline-none placeholder:text-faint"
                 />
               </div>
             </div>
-            <div className="mt-auto">
-              <button onClick={handleSave} className="w-full py-4 bg-[#0078D4] hover:bg-[#0086e6] text-white font-black uppercase tracking-widest text-xs transition-all flex items-center justify-center gap-2">
-                Add To TTab <ChevronRight size={16} />
-              </button>
-            </div>
-          </div>
-        </>
-      )}
+
+            <button onClick={handleSave} className="mt-auto h-11 rounded-xl bg-accent text-on-accent text-[14px] font-medium flex items-center justify-center gap-1.5 hover:brightness-110 active:scale-[0.98] transition">
+              收藏 <ChevronRight size={16} />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

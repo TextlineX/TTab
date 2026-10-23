@@ -1,5 +1,6 @@
 import type { AIConfig } from '../core/ai/client';
 import type { EmbedConfig } from '../core/vectors/embedApi';
+import type { ThemeSettings } from '../theme/tokens';
 
 /**
  * 封装 chrome.storage.local 的异步操作
@@ -53,6 +54,8 @@ export const storage = {
       embed: undefined as Partial<EmbedConfig> | undefined,
       /** 新收藏的书签自动归入最合适的已有文件夹 */
       autoFile: false,
+      /** 外观：明暗、强调色、背景、字体、密度（见 src/theme/tokens.ts） */
+      appearance: undefined as Partial<ThemeSettings> | undefined,
     };
     const saved = await storage.get('app_settings');
     return { ...defaults, ...saved };

@@ -1,17 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
-  Settings, X, Image as ImageIcon, Sparkles, Type,
-  ChevronRight, FolderEdit, Globe, Maximize, Languages, Hash,
-  Upload, Trash2
-} from 'lucide-react';
+import { Settings, X, Sparkles, Type, ChevronRight, FolderEdit, Globe, Maximize, Hash, Palette } from 'lucide-react';
 import { storage } from '../../../utils/storage';
 import { getTranslation } from '../../../utils/i18n';
 import FolderPicker from './FolderPicker';
-import AISettings from '../../smart/AISettings';
-import DataSettings from '../../smart/DataSettings';
-import SmartSettings from '../../smart/SmartSettings';
-import EmbedSettings from '../../smart/EmbedSettings';
+import SettingsModal from '../../settings/SettingsModal';
 
 interface SettingsPanelProps {
   currentPath: { id: string, title: string };
@@ -19,17 +12,10 @@ interface SettingsPanelProps {
   onRefresh: () => void;
 }
 
-const PRESET_WALLPAPERS = [
-  { id: 'default', name: 'Original', url: '' },
-  { id: 'nature', name: 'Peak', url: 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?q=80&w=2070' },
-  { id: 'abstract', name: 'Liquid', url: 'https://images.unsplash.com/photo-1550684848-fac1c5b4e853?q=80&w=2070' },
-  { id: 'space', name: 'Void', url: 'https://images.unsplash.com/photo-1534447677768-be436bb09401?q=80&w=2094' }
-];
-
 const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, onRefresh }) => {
   const [config, setConfig] = useState<any>(null);
   const [isPickerOpen, setIsPickerOpen] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
+  const [fullSettings, setFullSettings] = useState(false);
 
   useEffect(() => {
     storage.getSettings().then(setConfig);
@@ -43,30 +29,8 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, onRefresh }) => 
     onRefresh();
   };
 
-  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // 检查文件大小 (限制为 4MB，虽然有 unlimitedStorage，但为了性能建议不要太大)
-    if (file.size > 4 * 1024 * 1024) {
-      alert(t.imageTooLarge);
-      return;
-    }
-
-    setIsUploading(true);
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      const base64 = event.target?.result as string;
-      await update({ wallpaper: base64 });
-      setIsUploading(false);
-    };
-    reader.readAsDataURL(file);
-  };
-
   if (!config) return null;
   const t = getTranslation(config.language);
-
-  const isCustomWallpaper = config.wallpaper && !PRESET_WALLPAPERS.some(pw => pw.url === config.wallpaper);
 
   return (
     <div className="fixed inset-0 z-[100] flex justify-end">
@@ -75,7 +39,7 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, onRefresh }) => 
       <motion.div
         initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
         transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-        className="relative w-full max-w-sm h-full bg-[#111111] border-l border-white/10 shadow-2xl flex flex-col"
+        className="relative w-full max-w-sm h-full tt-raised !rounded-none border-r-0 flex flex-col"
       >
         <div className="flex items-center justify-between p-6 border-b border-white/5">
           <div className="flex items-center gap-3">
@@ -87,13 +51,17 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, onRefresh }) => 
 
         <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-10 no-scrollbar pb-20">
           
-          <AISettings value={config.ai} onSave={ai => update({ ai })} />
-
-          <EmbedSettings value={config.embed} chat={config.ai} onSave={embed => update({ embed })} />
-
-          <SmartSettings />
-
-          <DataSettings />
+          <button
+            onClick={() => setFullSettings(true)}
+            className="w-full p-4 rounded-2xl bg-accent-soft border border-[color:var(--accent-line)] hover:brightness-110 transition flex items-center gap-3 text-left"
+          >
+            <Palette size={18} className="text-accent-text shrink-0" />
+            <span className="flex-1 flex flex-col gap-0.5">
+              <span className="text-[14px] text-fg">外观、AI 与数据</span>
+              <span className="text-[12px] text-muted">主题色、背景、字体、AI 助手、语义向量、备份</span>
+            </span>
+            <ChevronRight size={16} className="text-muted" />
+          </button>
 
           {/* Section: Language */}
           <section className="flex flex-col gap-4">
@@ -111,25 +79,6 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, onRefresh }) => 
                 </button>
               ))}
             </div>
-          </section>
-
-          {/* Section: Typography */}
-          <section className="flex flex-col gap-4">
-            <div className="flex items-center gap-2 text-orange-400/60 font-black uppercase text-[10px] tracking-widest">
-              <Languages size={14} /> <span>{t.typography}</span>
-            </div>
-            <button 
-              onClick={() => update({ useCustomFont: !config.useCustomFont })}
-              className={`flex items-center justify-between p-4 rounded-2xl border transition-all ${config.useCustomFont ? 'bg-orange-500/10 border-orange-500/30 text-orange-400' : 'bg-white/5 border-white/5 text-white/40'}`}
-            >
-              <div className="flex flex-col items-start gap-0.5">
-                <span className="text-xs font-bold uppercase tracking-widest">Xiaolai SC</span>
-                <span className="text-[8px] opacity-60">{t.personalizedTypeface}</span>
-              </div>
-              <div className={`w-8 h-4 rounded-full p-0.5 transition-colors ${config.useCustomFont ? 'bg-orange-500' : 'bg-white/10'}`}>
-                <div className={`w-3 h-3 rounded-full bg-white transition-transform ${config.useCustomFont ? 'translate-x-4' : 'translate-x-0'}`} />
-              </div>
-            </button>
           </section>
 
           {/* Section: Layout Depth */}
@@ -225,60 +174,11 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, onRefresh }) => 
             </button>
           </section>
 
-          {/* Visual Theme */}
-          <section className="flex flex-col gap-4 pb-10">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-pink-400/60 font-black uppercase text-[10px] tracking-widest">
-                <ImageIcon size={14} /> <span>{t.visualTheme}</span>
-              </div>
-              <label className="flex items-center gap-1.5 px-3 py-1.5 bg-white/5 hover:bg-white/10 border border-white/10 rounded-full cursor-pointer transition-all group">
-                <Upload size={12} className="text-white/40 group-hover:text-pink-400" />
-                <span className="text-[9px] font-bold text-white/40 group-hover:text-white uppercase tracking-tighter">{t.upload}</span>
-                <input type="file" accept="image/*" className="hidden" onChange={handleFileUpload} />
-              </label>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              {/* Custom Image Slot (Only if custom image exists) */}
-              {isCustomWallpaper && (
-                <div className="relative aspect-video rounded-xl overflow-hidden border-2 border-pink-500 group">
-                  <img src={config.wallpaper} className="absolute inset-0 w-full h-full object-cover" />
-                  <button 
-                    onClick={() => update({ wallpaper: '' })}
-                    className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                  >
-                    <Trash2 size={16} className="text-red-400 mb-1" />
-                    <span className="text-[8px] font-black text-white uppercase tracking-widest">{t.remove}</span>
-                  </button>
-                </div>
-              )}
-
-              {/* Uploading Placeholder */}
-              {isUploading && (
-                <div className="aspect-video rounded-xl border-2 border-white/10 border-dashed animate-pulse flex items-center justify-center bg-white/5">
-                  <div className="w-4 h-4 border-2 border-pink-500/30 border-t-pink-500 rounded-full animate-spin" />
-                </div>
-              )}
-
-              {PRESET_WALLPAPERS.map(wp => (
-                <button 
-                  key={wp.id} 
-                  onClick={() => update({ wallpaper: wp.url })} 
-                  className={`relative aspect-video rounded-xl overflow-hidden border-2 transition-all ${config.wallpaper === wp.url ? 'border-pink-500 scale-[0.98]' : 'border-white/5 opacity-60 hover:opacity-100'}`}
-                >
-                  {wp.url ? <img src={wp.url} className="absolute inset-0 w-full h-full object-cover" /> : <div className="absolute inset-0 bg-gradient-to-br from-indigo-900 to-black" />}
-                  <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity">
-                    <span className="text-[8px] font-black text-white uppercase tracking-widest">{wp.name}</span>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </section>
-
         </div>
       </motion.div>
 
       <AnimatePresence>
+        {fullSettings && <SettingsModal key="full" onClose={() => setFullSettings(false)} />}
         {isPickerOpen && (
           <FolderPicker onClose={() => setIsPickerOpen(false)} onSelect={(id) => { update({ defaultFolderId: id }); setIsPickerOpen(false); }} />
         )}

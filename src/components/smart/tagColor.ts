@@ -7,16 +7,22 @@ export function tagHue(tag: string): number {
   return Math.abs(h) % 360;
 }
 
+/** 标签的颜色：色相固定，明暗跟随主题（变量在 theme/tokens.ts 里按深色 / 浅色生成） */
 export function tagChipStyle(tag: string, variant: 'soft' | 'solid' | 'ghost' = 'soft', strength = 1): CSSProperties {
   const h = tagHue(tag);
   if (variant === 'solid') {
-    return { background: `hsl(${h} 70% 70%)`, color: `hsl(${h} 45% 12%)`, borderColor: `hsl(${h} 70% 70%)` };
+    const bg = `hsl(${h} 65% var(--tag-solid-l, 70%))`;
+    return { background: bg, color: `hsl(${h} 45% var(--tag-solid-text, 12%))`, borderColor: bg };
   }
   if (variant === 'ghost') {
-    const a = 0.35 + 0.65 * Math.max(0, Math.min(1, strength));
-    return { color: `hsl(${h} 80% 82% / ${a})`, borderColor: `hsl(${h} 60% 65% / ${0.18 + 0.3 * strength})`, background: 'transparent' };
+    const a = 0.45 + 0.55 * Math.max(0, Math.min(1, strength));
+    return { color: `hsl(${h} var(--tag-s, 85%) var(--tag-l, 84%) / ${a})`, borderColor: `hsl(${h} 60% 55% / ${0.18 + 0.3 * strength})`, background: 'transparent' };
   }
-  return { background: `hsl(${h} 60% 60% / 0.14)`, color: `hsl(${h} 85% 84%)`, borderColor: `hsl(${h} 60% 65% / 0.25)` };
+  return {
+    background: `hsl(${h} 60% var(--tag-bg-l, 60%) / var(--tag-bg-a, 0.14))`,
+    color: `hsl(${h} var(--tag-s, 85%) var(--tag-l, 84%))`,
+    borderColor: `hsl(${h} 60% 55% / var(--tag-line-a, 0.25))`,
+  };
 }
 
 export const faviconUrl = (pageUrl: string, size = 64) => {

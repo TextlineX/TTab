@@ -1,8 +1,10 @@
 import React, { useState } from 'react';
-import { Database, Download, Upload } from 'lucide-react';
+import { Download, Upload } from 'lucide-react';
 import { exportPayload, loadMeta, parseImport, saveMeta } from '../../core/metaStore';
 import { loadAllBookmarks, bookmarkOps, hasBookmarkApi } from '../../core/bookmarkSource';
 import { mergeMeta } from '../../core/library';
+import { Group, Row } from '../settings/parts';
+import Button from '../../ui/Button';
 
 /**
  * 导出 / 导入标签和组合。
@@ -46,20 +48,20 @@ const DataSettings: React.FC = () => {
   };
 
   return (
-    <section className="flex flex-col gap-3">
-      <div className="flex items-center gap-2 text-emerald-300/80 text-[12px] font-bold">
-        <Database size={14} /> <span>标签数据</span>
-      </div>
-      <p className="text-[11px] text-white/40 leading-relaxed">在 Edge 和 Chrome 之间迁移或备份：在一边导出，另一边导入，标签和组合会合并，不会覆盖已有内容。</p>
-      <div className="grid grid-cols-2 gap-2">
-        <button onClick={doExport} className="h-9 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-xs text-white flex items-center justify-center gap-1.5"><Download size={13} /> 导出</button>
-        <label className="h-9 rounded-xl bg-white/5 border border-white/10 hover:bg-white/10 text-xs text-white flex items-center justify-center gap-1.5 cursor-pointer">
-          <Upload size={13} /> 导入
-          <input type="file" accept="application/json,.json" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) void doImport(f); e.target.value = ''; }} />
-        </label>
-      </div>
-      {msg && <p className="text-[11px] text-white/60 leading-relaxed">{msg}</p>}
-    </section>
+    <div className="flex flex-col gap-7">
+      <Group title="备份与迁移" desc="在 Edge 和 Chrome 之间迁移或备份：在一边导出，另一边导入。标签和组合会合并，不会覆盖已有内容">
+        <Row label="导出标签和组合" desc="保存为一个 JSON 文件，包含书签网址，方便在另一个浏览器补齐">
+          <Button size="sm" onClick={() => void doExport()} icon={<Download size={14} />}>导出</Button>
+        </Row>
+        <Row label="导入" desc="选择之前导出的 JSON 文件">
+          <label className="inline-flex items-center justify-center gap-1.5 h-8 px-3 rounded-xl bg-fill-2 hover:bg-fill-3 text-[12.5px] font-medium text-fg cursor-pointer transition-colors">
+            <Upload size={14} /> 选择文件
+            <input type="file" accept="application/json,.json" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) void doImport(f); e.target.value = ''; }} />
+          </label>
+        </Row>
+        {msg && <p className="px-4 py-3 text-[12.5px] text-accent-text leading-relaxed">{msg}</p>}
+      </Group>
+    </div>
   );
 };
 

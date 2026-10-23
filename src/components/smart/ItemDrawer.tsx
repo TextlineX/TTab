@@ -10,6 +10,7 @@ import { normalizeTag } from '../../core/normalize';
 import { aiTagBatch, buildTagContext } from '../../core/ai/tasks';
 import { isAIReady, type AIConfig } from '../../core/ai/client';
 import { faviconUrl, tagChipStyle } from './tagColor';
+import { fade, drawer } from '../../ui/motion';
 
 interface Props {
   item: LibraryItem;
@@ -73,15 +74,14 @@ const ItemDrawer: React.FC<Props> = ({ item, items, meta, index, ai, onClose, up
 
   return (
     <div className="fixed inset-0 z-[90] flex justify-end">
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onClose} className="absolute inset-0 bg-black/40" />
+      <motion.div variants={fade} initial="hidden" animate="show" exit="exit" onClick={onClose} className="absolute inset-0 bg-[color:var(--scrim)] backdrop-blur-[2px]" />
       <motion.aside
-        initial={{ x: 40, opacity: 0 }} animate={{ x: 0, opacity: 1 }} exit={{ x: 40, opacity: 0 }}
-        transition={{ type: 'spring', damping: 30, stiffness: 320 }}
-        className="tt-drawer relative w-full max-w-[420px] h-full flex flex-col"
+        variants={drawer} initial="hidden" animate="show" exit="exit"
+        className="tt-raised relative w-full max-w-[440px] h-full flex flex-col rounded-l-[24px] border-r-0"
         aria-label="网页详情"
       >
         <header className="flex items-start gap-3 p-5 pb-4">
-          <div className="w-11 h-11 rounded-[12px] bg-white/8 flex items-center justify-center shrink-0">
+          <div className="w-11 h-11 rounded-[12px] bg-fill-2 flex items-center justify-center shrink-0">
             {icon ? <img src={icon} alt="" className="w-6 h-6" /> : <span className="text-lg">{item.title[0]}</span>}
           </div>
           <div className="min-w-0 flex-1">
@@ -90,19 +90,19 @@ const ItemDrawer: React.FC<Props> = ({ item, items, meta, index, ai, onClose, up
               onChange={e => setTitle(e.target.value)}
               onBlur={() => title.trim() && title !== item.title && onRenameBookmark(item, title.trim())}
               onKeyDown={e => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
-              className="w-full bg-transparent text-[17px] text-[color:var(--text)] outline-none border-b border-transparent focus:border-white/20"
+              className="w-full bg-transparent text-[17px] text-fg outline-none border-b border-transparent focus:border-line-strong"
               aria-label="书签标题"
             />
-            <a href={item.url} target="_blank" rel="noreferrer" className="block truncate text-[12px] text-[color:var(--muted)] hover:text-[color:var(--text)]">{item.url}</a>
+            <a href={item.url} target="_blank" rel="noreferrer" className="block truncate text-[12px] text-muted hover:text-fg">{item.url}</a>
           </div>
-          <button onClick={onClose} aria-label="关闭" className="p-1.5 rounded-lg hover:bg-white/10 text-[color:var(--muted)]"><X size={18} /></button>
+          <button onClick={onClose} aria-label="关闭" className="p-2 -mr-1 rounded-xl hover:bg-fill-2 text-muted hover:text-fg transition-colors"><X size={18} /></button>
         </header>
 
         <div className="flex-1 overflow-y-auto px-5 pb-6 flex flex-col gap-6">
           <section className="flex flex-col gap-2.5">
             <div className="flex items-center justify-between">
-              <h3 className="text-[13px] text-[color:var(--muted)]">标签</h3>
-              <button onClick={suggest} disabled={suggesting} className="flex items-center gap-1.5 text-[12px] text-[color:var(--ai)] hover:brightness-125 disabled:opacity-60">
+              <h3 className="text-[13px] text-muted">标签</h3>
+              <button onClick={suggest} disabled={suggesting} className="flex items-center gap-1.5 text-[12px] text-ai hover:brightness-125 disabled:opacity-60">
                 {suggesting ? <Loader2 size={13} className="animate-spin" /> : <Sparkles size={13} />} AI 建议
               </button>
             </div>
@@ -111,20 +111,20 @@ const ItemDrawer: React.FC<Props> = ({ item, items, meta, index, ai, onClose, up
                 <span key={t.name} style={tagChipStyle(t.name, 'soft')} className="group flex items-center gap-1 pl-2 pr-1 h-7 rounded-full border text-[13px]" title={`来源：${SOURCE_LABEL[t.source]}`}>
                   {t.source === 'ai' && <Sparkles size={10} className="opacity-60" />}
                   {t.name}
-                  <button onClick={() => removeTag(t.name)} aria-label={`移除 ${t.name}`} className="p-0.5 rounded-full opacity-50 hover:opacity-100 hover:bg-white/10"><X size={12} /></button>
+                  <button onClick={() => removeTag(t.name)} aria-label={`移除 ${t.name}`} className="p-0.5 rounded-full opacity-50 hover:opacity-100 hover:bg-fill-2"><X size={12} /></button>
                 </span>
               ))}
-              {!item.tagEntries.length && <span className="text-[12px] text-[color:var(--muted)]">还没有标签</span>}
+              {!item.tagEntries.length && <span className="text-[12px] text-muted">还没有标签</span>}
             </div>
             {suggested.length > 0 && (
-              <div className="flex flex-wrap items-center gap-1.5 p-2 rounded-[12px] bg-[color:var(--ai)]/8 border border-[color:var(--ai)]/20">
-                <span className="text-[12px] text-[color:var(--ai)] mr-1">建议</span>
+              <div className="flex flex-wrap items-center gap-1.5 p-2 rounded-[12px] bg-ai-soft border border-[color:var(--ai)]/20">
+                <span className="text-[12px] text-ai mr-1">建议</span>
                 {suggested.map(t => (
-                  <button key={t} onClick={() => addTag(t)} style={tagChipStyle(t, 'ghost')} className="h-7 px-2.5 rounded-full border text-[13px] hover:!bg-white/5">+ {t}</button>
+                  <button key={t} onClick={() => addTag(t)} style={tagChipStyle(t, 'ghost')} className="h-7 px-2.5 rounded-full border text-[13px] hover:!bg-fill-1">+ {t}</button>
                 ))}
                 <button
                   onClick={() => { update(s => addTags(s, [item.key], suggested, 'ai'), 'AI 建议标签'); setSuggested([]); }}
-                  className="ml-auto flex items-center gap-1 text-[12px] text-[color:var(--ai)]"
+                  className="ml-auto flex items-center gap-1 text-[12px] text-ai"
                 ><Check size={13} /> 全部采用</button>
               </div>
             )}
@@ -138,7 +138,7 @@ const ItemDrawer: React.FC<Props> = ({ item, items, meta, index, ai, onClose, up
                   if (e.key === 'Backspace' && !draft && item.tags.length) removeTag(item.tags[item.tags.length - 1]);
                 }}
                 placeholder="输入标签，回车添加，Tab 补全"
-                className="w-full h-9 px-3 rounded-[10px] bg-white/5 border border-white/10 focus:border-white/25 outline-none text-[13px] text-[color:var(--text)] placeholder:text-[color:var(--muted)]"
+                className="w-full h-9 px-3 rounded-[10px] bg-fill-1 border border-line focus:border-line-strong outline-none text-[13px] text-fg placeholder:text-muted"
               />
               {completions.length > 0 && (
                 <div className="flex flex-wrap gap-1 mt-1.5">
@@ -148,48 +148,48 @@ const ItemDrawer: React.FC<Props> = ({ item, items, meta, index, ai, onClose, up
                 </div>
               )}
             </div>
-            {error && <p className="text-[12px] text-[color:var(--warn)]">{error}</p>}
+            {error && <p className="text-[12px] text-warn">{error}</p>}
           </section>
 
           <section className="flex flex-col gap-2">
-            <h3 className="text-[13px] text-[color:var(--muted)]">一句话简介</h3>
+            <h3 className="text-[13px] text-muted">一句话简介</h3>
             <textarea
               value={summary}
               onChange={e => setSummaryDraft(e.target.value)}
               onBlur={() => summary !== (item.summary || '') && update(s => setSummary(s, item.key, summary), '修改简介')}
               rows={2}
               placeholder="写给以后的自己：这个网页用来做什么"
-              className="w-full px-3 py-2 rounded-[10px] bg-white/5 border border-white/10 focus:border-white/25 outline-none text-[13px] text-[color:var(--text)] placeholder:text-[color:var(--muted)] resize-none"
+              className="w-full px-3 py-2 rounded-[10px] bg-fill-1 border border-line focus:border-line-strong outline-none text-[13px] text-fg placeholder:text-muted resize-none"
             />
           </section>
 
           {related.length > 0 && (
             <section className="flex flex-col gap-1">
-              <h3 className="text-[13px] text-[color:var(--muted)] mb-1">相关网页</h3>
+              <h3 className="text-[13px] text-muted mb-1">相关网页</h3>
               {related.map(r => (
-                <button key={r.item.key} onClick={() => onShowItem(r.item)} className="flex items-center gap-2.5 px-2 py-1.5 -mx-2 rounded-[10px] hover:bg-white/6 text-left">
+                <button key={r.item.key} onClick={() => onShowItem(r.item)} className="flex items-center gap-2.5 px-2 py-1.5 -mx-2 rounded-[10px] hover:bg-fill-1 text-left">
                   {faviconUrl(r.item.url, 32)
                     ? <img src={faviconUrl(r.item.url, 32)} alt="" className="w-4 h-4 shrink-0" />
-                    : <span className="w-4 h-4 shrink-0 rounded bg-white/10 text-[9px] leading-4 text-center text-[color:var(--muted)]">{r.item.title[0]}</span>}
-                  <span className="truncate text-[13px] text-[color:var(--text)] flex-1">{r.item.title}</span>
-                  <span className="shrink-0 text-[11px] text-[color:var(--muted)]">{r.shared.slice(0, 2).join('、') || (r.sim ? '内容相近' : r.item.domain)}</span>
+                    : <span className="w-4 h-4 shrink-0 rounded bg-fill-2 text-[9px] leading-4 text-center text-muted">{r.item.title[0]}</span>}
+                  <span className="truncate text-[13px] text-fg flex-1">{r.item.title}</span>
+                  <span className="shrink-0 text-[11px] text-muted">{r.shared.slice(0, 2).join('、') || (r.sim ? '内容相近' : r.item.domain)}</span>
                 </button>
               ))}
             </section>
           )}
 
-          <section className="flex flex-col gap-1 text-[12px] text-[color:var(--muted)]">
+          <section className="flex flex-col gap-1 text-[12px] text-muted">
             {item.folderPath.length > 0 && <span className="flex items-center gap-1.5"><FolderOpen size={13} /> {item.folderPath.join(' / ')}</span>}
             {item.dateAdded && <span>收藏于 {new Date(item.dateAdded).toLocaleDateString()}</span>}
             {item.opens > 0 && <span>通过 TTab 打开过 {item.opens} 次</span>}
           </section>
         </div>
 
-        <footer className="flex items-center gap-2 p-4 border-t border-white/8">
-          <button onClick={() => onOpen(item)} className="flex-1 h-10 rounded-[12px] bg-[color:var(--text)] text-[#15171c] text-[14px] flex items-center justify-center gap-2"><ExternalLink size={15} /> 打开</button>
+        <footer className="flex items-center gap-2 p-4 border-t border-line">
+          <button onClick={() => onOpen(item)} className="flex-1 h-10 rounded-[12px] bg-accent text-on-accent text-[14px] font-medium flex items-center justify-center gap-2 hover:brightness-110 active:scale-[0.98] transition"><ExternalLink size={15} /> 打开</button>
           <button
             onClick={() => { if (confirm(`从浏览器书签中删除「${item.title}」？`)) onDeleteBookmark(item); }}
-            className="h-10 px-3 rounded-[12px] text-[color:var(--muted)] hover:text-red-300 hover:bg-red-500/10 flex items-center gap-1.5 text-[13px]"
+            className="h-10 px-3 rounded-[12px] text-muted hover:text-danger hover:bg-[color:var(--danger)]/12 flex items-center gap-1.5 text-[13px]"
           ><Trash2 size={15} /> 删除书签</button>
         </footer>
       </motion.aside>

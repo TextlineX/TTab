@@ -40,7 +40,13 @@
 | `core/ai/actions.ts` | AI 可提议的动作、校验、执行 |
 | `core/ai/tasks.ts` | 批量打标签、自然语言指令 → 动作计划、快捷指令 |
 | `state/useLibrary.ts` | React 状态中心：合并书签与智能数据、撤销栈、自动规则打标签 |
-| `components/smart/*` | 智能视图界面 |
+| `core/nav.ts` | 导航模型：分类键（`overview` / `view:` / `col:` / `grp:` / `combo:` / `folder:` / `tag:`）解析、分类总览（去重：包含 ≥80% 或重合 >80% 只保留一个）、排序、文件夹树 |
+| `theme/tokens.ts` | 主题变量：按强调色和深浅色生成全部颜色，自动保证文字对比度（WCAG）；壁纸取色 |
+| `theme/useTheme.ts` | 应用主题到 `<html>`（CSS 变量 + `data-scheme` / `data-density` / `data-font`），必应每日图片 |
+| `ui/*` | 基础组件：弹窗、按钮、开关、复选框、分段选择、下拉选择（拼音搜索）、右键菜单、文件夹选择器、滑块；`ui/motion.ts` 是统一的动效参数 |
+| `components/shell/*` | 侧边栏、分类总览（瀑布流）、分类专注视图 |
+| `components/settings/*` | 设置弹窗（分区导航）与外观设置 |
+| `components/smart/*` | 智能视图：主页编排、卡片、抽屉、批量操作、AI 预览、整理书签 |
 
 ## 权限
 

@@ -24,16 +24,16 @@ const WeatherWidget: React.FC<WidgetProps<Cfg>> = ({ config, instance }) => {
     }).catch(() => setError('获取天气失败，请检查网络或在设置里重新选择城市'));
   }, [key, cache, config.lat, config.lon, setCache]);
 
-  if (config.lat === null) return <div className="h-full flex items-center justify-center text-[12px] text-[color:var(--muted)] px-3 text-center">在小组件设置里选择城市</div>;
-  if (error && !cache) return <div className="h-full flex items-center justify-center text-[12px] text-[color:var(--warn)] px-3 text-center">{error}</div>;
-  if (!cache) return <div className="h-full flex items-center justify-center"><Loader2 size={16} className="animate-spin text-[color:var(--muted)]" /></div>;
+  if (config.lat === null) return <div className="h-full flex items-center justify-center text-[12px] text-muted px-3 text-center">在小组件设置里选择城市</div>;
+  if (error && !cache) return <div className="h-full flex items-center justify-center text-[12px] text-warn px-3 text-center">{error}</div>;
+  if (!cache) return <div className="h-full flex items-center justify-center"><Loader2 size={16} className="animate-spin text-muted" /></div>;
   const w = describeWeather(cache.code);
   return (
     <div className={`h-full flex ${instance.size === 's' ? 'flex-col justify-center items-center gap-1' : 'items-center justify-center gap-4'} px-3`}>
       <span className="text-[34px] leading-none">{w.emoji}</span>
       <div className={`flex flex-col ${instance.size === 's' ? 'items-center' : ''}`}>
-        <span className="tt-greet text-[30px] leading-none text-[color:var(--text)] tabular-nums">{Math.round(cache.temp)}°</span>
-        <span className="text-[12px] text-[color:var(--muted)] mt-1">{config.name} {w.text} {Math.round(cache.min)}°~{Math.round(cache.max)}°</span>
+        <span className="tt-greet text-[30px] leading-none text-fg tabular-nums">{Math.round(cache.temp)}°</span>
+        <span className="text-[12px] text-muted mt-1">{config.name} {w.text} {Math.round(cache.min)}°~{Math.round(cache.max)}°</span>
       </div>
     </div>
   );
@@ -53,15 +53,15 @@ const WeatherSettings: React.FC<WidgetSettingsProps<Cfg>> = ({ config, setConfig
     setBusy(false);
   };
   return (
-    <div className="flex flex-col gap-2 text-[12px] text-[color:var(--muted)]">
+    <div className="flex flex-col gap-2 text-[12px] text-muted">
       <span>当前城市：{config.name || '未设置'}</span>
       <form onSubmit={e => { e.preventDefault(); void search(); }} className="flex gap-1.5">
-        <input value={q} onChange={e => setQ(e.target.value)} placeholder="输入城市名，如 上海" className="flex-1 h-9 px-3 rounded-[10px] bg-white/8 border border-white/15 outline-none text-[13px] text-[color:var(--text)]" />
-        <button type="submit" className="h-9 px-3 rounded-[10px] bg-white/10 text-[color:var(--text)]">{busy ? '…' : '搜索'}</button>
+        <input value={q} onChange={e => setQ(e.target.value)} placeholder="输入城市名，如 上海" className="flex-1 h-9 px-3 rounded-[10px] bg-fill-2 border border-line-strong outline-none text-[13px] text-fg" />
+        <button type="submit" className="h-9 px-3 rounded-[10px] bg-fill-2 text-fg">{busy ? '…' : '搜索'}</button>
       </form>
       {results.map(r => (
-        <button key={`${r.latitude},${r.longitude}`} onClick={() => { setConfig({ name: r.name, lat: r.latitude, lon: r.longitude }); setResults([]); }} className="text-left px-3 py-2 rounded-[10px] hover:bg-white/8 text-[13px] text-[color:var(--text)]">
-          {r.name} <span className="text-[color:var(--muted)]">{[r.admin1, r.country].filter(Boolean).join('，')}</span>
+        <button key={`${r.latitude},${r.longitude}`} onClick={() => { setConfig({ name: r.name, lat: r.latitude, lon: r.longitude }); setResults([]); }} className="text-left px-3 py-2 rounded-[10px] hover:bg-fill-2 text-[13px] text-fg">
+          {r.name} <span className="text-muted">{[r.admin1, r.country].filter(Boolean).join('，')}</span>
         </button>
       ))}
     </div>

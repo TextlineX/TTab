@@ -4,6 +4,7 @@ import type { BuiltinWidget, WidgetProps, WidgetSettingsProps } from '../types';
 import { uniqueByKey, usageOf } from '../../core/tagGraph';
 import { resolveCollection } from '../../core/library';
 import { faviconUrl, tagHue } from '../../components/smart/tagColor';
+import Select from '../../ui/Select';
 
 interface Cfg { source: string; count: number }
 
@@ -16,12 +17,12 @@ const Tile: React.FC<{ title: string; url: string; domain: string; onOpen: (bg: 
       onClick={e => onOpen(e.ctrlKey || e.metaKey)}
       onAuxClick={e => { if (e.button === 1) onOpen(true); }}
       title={title}
-      className="flex flex-col items-center gap-1.5 p-1.5 rounded-[10px] hover:bg-white/8 min-w-0"
+      className="flex flex-col items-center gap-1.5 p-1.5 rounded-[10px] hover:bg-fill-2 min-w-0"
     >
-      <span className="w-9 h-9 rounded-[10px] flex items-center justify-center" style={{ background: `hsl(${hue} 35% 22% / 0.9)` }}>
-        {icon && ok ? <img src={icon} alt="" className="w-5 h-5" onError={() => setOk(false)} /> : <span className="text-[14px] font-bold" style={{ color: `hsl(${hue} 70% 80%)` }}>{(title[0] || '?').toUpperCase()}</span>}
+      <span className="w-9 h-9 rounded-[10px] flex items-center justify-center" style={{ background: `hsl(${hue} 45% 50% / 0.16)`, boxShadow: `inset 0 0 0 1px hsl(${hue} 45% 55% / 0.18)` }}>
+        {icon && ok ? <img src={icon} alt="" className="w-5 h-5" onError={() => setOk(false)} /> : <span className="text-[14px] font-bold" style={{ color: `hsl(${hue} var(--tag-s, 70%) var(--tag-l, 80%))` }}>{(title[0] || '?').toUpperCase()}</span>}
       </span>
-      <span className="w-full truncate text-[11px] text-[color:var(--muted)]">{title}</span>
+      <span className="w-full truncate text-[11px] text-muted">{title}</span>
     </button>
   );
 };
@@ -44,19 +45,19 @@ const TopSitesWidget: React.FC<WidgetProps<Cfg>> = ({ config, host, instance }) 
   return (
     <div className="h-full p-2.5 grid content-start gap-1" style={{ gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))` }}>
       {shown.map(it => <Tile key={it.key} title={it.title} url={it.url} domain={it.domain} onOpen={bg => host.openUrl(it.url, bg)} />)}
-      {!shown.length && <p className="col-span-full p-2 text-[12px] text-[color:var(--muted)]">这个组合里还没有网页</p>}
+      {!shown.length && <p className="col-span-full p-2 text-[12px] text-muted">这个组合里还没有网页</p>}
     </div>
   );
 };
 
 const TopSitesSettings: React.FC<WidgetSettingsProps<Cfg>> = ({ config, setConfig, host }) => (
-  <label className="flex flex-col gap-1.5 text-[12px] text-[color:var(--muted)]">
+  <label className="flex flex-col gap-1.5 text-[12px] text-muted">
     显示哪些网页
-    <select value={config.source} onChange={e => setConfig({ source: e.target.value })} className="h-9 px-2 rounded-[10px] bg-white/8 border border-white/15 text-[13px] text-[color:var(--text)] outline-none">
-      <option value="frequent" className="bg-[#1b1d23]">最常用</option>
-      <option value="now" className="bg-[#1b1d23]">此刻常用（按时段）</option>
-      {host.collections.map(c => <option key={c.id} value={`col:${c.id}`} className="bg-[#1b1d23]">组合：{c.name}</option>)}
-    </select>
+    <Select ariaLabel="显示哪些网页" value={config.source} onChange={v => setConfig({ source: v })} className="w-full" options={[
+      { value: 'frequent', label: '最常用' },
+      { value: 'now', label: '此刻常用（按时段）' },
+      ...host.collections.map(c => ({ value: `col:${c.id}`, label: c.name, group: '我的组合' })),
+    ]} />
   </label>
 );
 

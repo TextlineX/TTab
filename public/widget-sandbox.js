@@ -11,6 +11,17 @@
   var sizeListeners = [];
   var booted = false;
 
+  // 页面加载时就用和 TTab 相同的明暗，避免 iframe 出现不透明底色
+  document.documentElement.style.colorScheme = location.hash === '#light' ? 'light' : 'dark';
+  function applyTheme(msg) {
+    var vars = msg.theme || {};
+    Object.keys(vars).forEach(function (k) { document.documentElement.style.setProperty(k, vars[k]); });
+    if (msg.scheme) {
+      document.documentElement.style.colorScheme = msg.scheme;
+      document.documentElement.dataset.scheme = msg.scheme;
+    }
+  }
+
   function post(msg) {
     msg.__ttab = 1;
     parent.postMessage(msg, '*');
@@ -69,8 +80,7 @@
     var def = msg.def || {};
     ttab.config = msg.config || {};
     ttab.size = msg.size || 's';
-    var vars = msg.theme || {};
-    Object.keys(vars).forEach(function (k) { document.documentElement.style.setProperty(k, vars[k]); });
+    applyTheme(msg);
     document.documentElement.dataset.size = ttab.size;
     var style = document.createElement('style');
     style.textContent = def.css || '';
@@ -94,6 +104,8 @@
     if (!m || m.__ttab !== 1) return;
     if (m.type === 'init') {
       if (!booted) boot(m);
+    } else if (m.type === 'theme') {
+      applyTheme(m);
     } else if (m.type === 'config') {
       ttab.config = m.config || {};
       configListeners.forEach(function (fn) { try { fn(ttab.config); } catch (err) { showError(err); } });

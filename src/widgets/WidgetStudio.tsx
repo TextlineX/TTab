@@ -7,6 +7,8 @@ import { SIZE_LABEL, type CustomWidgetDef, type WidgetHost, type WidgetSize } fr
 import { hostPatternsFor, validateWidgetDef } from './sdk/validate';
 import { downloadWidget } from './WidgetGallery';
 import { requestOrigins } from './permissions';
+import Checkbox from '../ui/Checkbox';
+import Select from '../ui/Select';
 
 interface Props {
   initial?: CustomWidgetDef;
@@ -42,8 +44,8 @@ ttab.fetchJSON(url)
 样式变量：var(--text) var(--muted) var(--ai) var(--warn)
 html[data-size="l"] 可以按尺寸写样式`;
 
-const field = 'h-8 px-2.5 rounded-[8px] bg-white/8 border border-white/12 outline-none text-[12px] text-[color:var(--text)]';
-const code = 'w-full h-full min-h-[220px] p-3 rounded-[10px] bg-black/40 border border-white/10 outline-none font-mono text-[12px] leading-[1.6] text-[#e6e2d8] resize-none';
+const field = 'h-8 px-2.5 rounded-[8px] bg-fill-2 border border-line outline-none text-[12px] text-fg';
+const code = 'w-full h-full min-h-[220px] p-3 rounded-[10px] bg-[color:var(--bg)] border border-line focus:border-[color:var(--accent-line)] outline-none font-mono text-[12px] leading-[1.6] text-fg resize-none';
 
 /** 小组件工作室：写 HTML/CSS/JS，实时预览，保存安装或导出分享 */
 const WidgetStudio: React.FC<Props> = ({ initial, host, onSave, onClose }) => {
@@ -112,9 +114,9 @@ const WidgetStudio: React.FC<Props> = ({ initial, host, onSave, onClose }) => {
       onClose={onClose}
       width={1120}
       footer={<>
-        <span className="mr-auto text-[12px] text-[color:var(--muted)]">{message || (validation.ok ? '' : validation.errors.join('；'))}</span>
-        <button onClick={() => validation.def && downloadWidget(validation.def)} disabled={!validation.ok} className="h-9 px-3 rounded-[10px] text-[13px] text-[color:var(--text)] hover:bg-white/8 disabled:opacity-40 flex items-center gap-1.5"><Download size={14} /> 导出文件</button>
-        <button onClick={save} disabled={!validation.ok} className="h-9 px-4 rounded-[10px] text-[13px] bg-[color:var(--text)] text-[#15171c] disabled:opacity-40 flex items-center gap-1.5"><Save size={14} /> 保存并安装</button>
+        <span className="mr-auto text-[12px] text-muted">{message || (validation.ok ? '' : validation.errors.join('；'))}</span>
+        <button onClick={() => validation.def && downloadWidget(validation.def)} disabled={!validation.ok} className="h-9 px-3 rounded-[10px] text-[13px] text-fg hover:bg-fill-2 disabled:opacity-40 flex items-center gap-1.5"><Download size={14} /> 导出文件</button>
+        <button onClick={save} disabled={!validation.ok} className="h-9 px-4 rounded-[10px] text-[13px] bg-accent text-on-accent disabled:opacity-40 flex items-center gap-1.5"><Save size={14} /> 保存并安装</button>
       </>}
     >
       <div className="grid grid-cols-1 lg:grid-cols-[1fr_520px] gap-5">
@@ -123,31 +125,28 @@ const WidgetStudio: React.FC<Props> = ({ initial, host, onSave, onClose }) => {
             <input className={field} value={def.name} onChange={e => set({ name: e.target.value })} placeholder="名称" aria-label="名称" />
             <input className={field} value={def.id} onChange={e => set({ id: e.target.value.trim() })} placeholder="作者.名称" aria-label="标识" />
             <input className={field} value={def.version} onChange={e => set({ version: e.target.value.trim() })} placeholder="1.0.0" aria-label="版本" />
-            <select className={field} value="" onChange={e => loadTemplate(e.target.value)} aria-label="从模板开始">
-              <option value="" className="bg-[#1b1d23]">从模板开始…</option>
-              {TEMPLATES.map(t => <option key={t.id} value={t.id} className="bg-[#1b1d23]">{t.label}</option>)}
-            </select>
+            <Select ariaLabel="从模板开始" value="" placeholder="从模板开始…" onChange={v => loadTemplate(v)} options={TEMPLATES.map(t => ({ value: t.id, label: t.label }))} className="w-full" minWidth={180} />
           </div>
           <input className={field} value={def.description || ''} onChange={e => set({ description: e.target.value })} placeholder="一句话介绍" aria-label="介绍" />
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[12px] text-[color:var(--muted)]">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-[12px] text-muted">
             <span className="flex items-center gap-2">尺寸
               {SIZES.map(s => (
-                <label key={s} className="flex items-center gap-1"><input type="checkbox" className="accent-sky-300" checked={def.sizes.includes(s)} onChange={() => toggleSize(s)} />{SIZE_LABEL[s]}</label>
+                <Checkbox key={s} checked={def.sizes.includes(s)} onChange={() => toggleSize(s)} label={SIZE_LABEL[s]} />
               ))}
             </span>
             <span className="flex items-center gap-2">权限
               {(['bookmarks', 'open', 'storage'] as const).map(p => (
-                <label key={p} className="flex items-center gap-1"><input type="checkbox" className="accent-sky-300" checked={def.permissions.includes(p)} onChange={() => togglePerm(p)} />{p === 'bookmarks' ? '读取书签' : p === 'open' ? '打开网页' : '保存数据'}</label>
+                <Checkbox key={p} checked={def.permissions.includes(p)} onChange={() => togglePerm(p)} label={p === 'bookmarks' ? '读取书签' : p === 'open' ? '打开网页' : '保存数据'} />
               ))}
             </span>
           </div>
-          <label className="flex flex-col gap-1 text-[12px] text-[color:var(--muted)]">联网域名（每行一个，如 api.example.com 或 *.example.com；不联网就留空）
-            <textarea value={netText} onChange={e => setNetText(e.target.value)} rows={2} className="px-2.5 py-1.5 rounded-[8px] bg-white/8 border border-white/12 outline-none text-[12px] font-mono text-[color:var(--text)] resize-none" />
+          <label className="flex flex-col gap-1 text-[12px] text-muted">联网域名（每行一个，如 api.example.com 或 *.example.com；不联网就留空）
+            <textarea value={netText} onChange={e => setNetText(e.target.value)} rows={2} className="px-2.5 py-1.5 rounded-[8px] bg-fill-2 border border-line outline-none text-[12px] font-mono text-fg resize-none" />
           </label>
 
-          <div className="flex gap-1 border-b border-white/8">
+          <div className="flex gap-1 border-b border-line">
             {(['html', 'css', 'js', 'config', 'doc'] as const).map(t => (
-              <button key={t} onClick={() => setTab(t)} className={`h-8 px-3 text-[12px] -mb-px border-b-2 ${tab === t ? 'border-[color:var(--ai)] text-[color:var(--text)]' : 'border-transparent text-[color:var(--muted)] hover:text-[color:var(--text)]'}`}>
+              <button key={t} onClick={() => setTab(t)} className={`h-8 px-3 text-[12px] -mb-px border-b-2 ${tab === t ? 'border-[color:var(--ai)] text-fg' : 'border-transparent text-muted hover:text-fg'}`}>
                 {t === 'config' ? '配置项' : t === 'doc' ? <span className="flex items-center gap-1"><BookOpen size={12} />接口说明</span> : t.toUpperCase()}
               </button>
             ))}
@@ -165,20 +164,20 @@ const WidgetStudio: React.FC<Props> = ({ initial, host, onSave, onClose }) => {
         </div>
 
         <div className="flex flex-col gap-3 min-w-0">
-          <div className="flex items-center gap-2 text-[12px] text-[color:var(--muted)]">
+          <div className="flex items-center gap-2 text-[12px] text-muted">
             预览
             {def.sizes.map(s => (
-              <button key={s} onClick={() => setPreviewSize(s)} className={`h-7 px-2.5 rounded-[8px] border ${previewSize === s ? 'bg-white/12 border-white/25 text-[color:var(--text)]' : 'border-white/10'}`}>{SIZE_LABEL[s]}</button>
+              <button key={s} onClick={() => setPreviewSize(s)} className={`h-7 px-2.5 rounded-[8px] border ${previewSize === s ? 'bg-fill-3 border-line-strong text-fg' : 'border-line'}`}>{SIZE_LABEL[s]}</button>
             ))}
-            <button onClick={() => { if (validation.def) { setPreviewDef(validation.def); setRunId(n => n + 1); setRuntimeError(''); } }} className="ml-auto h-7 px-2.5 rounded-[8px] bg-white/10 hover:bg-white/15 text-[color:var(--text)] flex items-center gap-1"><Play size={12} /> 重新运行</button>
+            <button onClick={() => { if (validation.def) { setPreviewDef(validation.def); setRunId(n => n + 1); setRuntimeError(''); } }} className="ml-auto h-7 px-2.5 rounded-[8px] bg-fill-2 hover:bg-fill-3 text-fg flex items-center gap-1"><Play size={12} /> 重新运行</button>
           </div>
           <div className="tt-preview-stage rounded-[14px] p-5 flex items-start justify-center overflow-auto min-h-[300px]">
             <div className="tt-widget rounded-[16px] overflow-hidden shrink-0" style={{ width: pw, height: ph }}>
               <WidgetFrame def={previewDef} instanceId={`preview_${previewDef.id}`} size={previewSize} config={Object.fromEntries((previewDef.config || []).map(f => [f.key, f.default]))} host={host} onError={setRuntimeError} reloadKey={runId} />
             </div>
           </div>
-          {runtimeError && <p className="text-[12px] text-[color:var(--warn)] whitespace-pre-wrap">{runtimeError}</p>}
-          <p className="text-[11px] text-[color:var(--muted)] leading-relaxed">预览使用真实的书签数据和权限检查；预览里保存的数据和正式添加的小组件互不影响。</p>
+          {runtimeError && <p className="text-[12px] text-warn whitespace-pre-wrap">{runtimeError}</p>}
+          <p className="text-[11px] text-muted leading-relaxed">预览使用真实的书签数据和权限检查；预览里保存的数据和正式添加的小组件互不影响。</p>
         </div>
       </div>
     </Modal>

@@ -62,10 +62,10 @@ const WidgetBoard: React.FC<Props> = ({ host }) => {
   return (
     <section aria-label="小组件" className="flex flex-col gap-2.5">
       <div className="flex items-center gap-3">
-        <h2 className="text-[14px] text-[color:var(--muted)]">小组件</h2>
-        <div className="ml-auto flex items-center gap-3 text-[12px] text-[color:var(--muted)]">
-          {editing && <button onClick={() => setGallery(true)} className="flex items-center gap-1 hover:text-[color:var(--text)]"><Plus size={13} /> 添加</button>}
-          <button onClick={() => setEditing(e => !e)} className={editing ? 'text-[color:var(--text)]' : 'hover:text-[color:var(--text)]'}>{editing ? '完成' : '编辑'}</button>
+        <h2 className="text-[14px] text-muted">小组件</h2>
+        <div className="ml-auto flex items-center gap-3 text-[12px] text-muted">
+          {editing && <button onClick={() => setGallery(true)} className="flex items-center gap-1 hover:text-fg"><Plus size={13} /> 添加</button>}
+          <button onClick={() => setEditing(e => !e)} className={editing ? 'text-fg' : 'hover:text-fg'}>{editing ? '完成' : '编辑'}</button>
         </div>
       </div>
 
@@ -90,28 +90,28 @@ const WidgetBoard: React.FC<Props> = ({ host }) => {
               ) : custom ? (
                 <WidgetFrame def={custom} instanceId={inst.id} size={inst.size} config={config} host={host} />
               ) : (
-                <div className="h-full flex flex-col items-center justify-center gap-1 text-[12px] text-[color:var(--muted)]"><Puzzle size={18} />这个小组件已被卸载</div>
+                <div className="h-full flex flex-col items-center justify-center gap-1 text-[12px] text-muted"><Puzzle size={18} />这个小组件已被卸载</div>
               )}
               {editing && (
-                <div className="absolute inset-0 bg-black/45 backdrop-blur-[2px] flex flex-col items-center justify-center gap-2">
-                  <GripVertical size={16} className="text-white/50" aria-hidden />
+                <div className="absolute inset-0 bg-[color:var(--scrim)] backdrop-blur-[2px] flex flex-col items-center justify-center gap-2">
+                  <GripVertical size={16} className="text-muted" aria-hidden />
                   <div className="flex items-center gap-1">
                     {sizes.length > 1 && (
-                      <button onClick={() => cycleSize(inst, sizes)} title="切换尺寸" className="h-8 px-2.5 rounded-[10px] bg-white/15 hover:bg-white/25 text-[12px] text-white">{SIZE_LABEL[inst.size]}</button>
+                      <button onClick={() => cycleSize(inst, sizes)} title="切换尺寸" className="h-8 px-2.5 rounded-[10px] bg-fill-3 hover:bg-fill-3 text-[12px] text-fg">{SIZE_LABEL[inst.size]}</button>
                     )}
                     {(builtin?.Settings || custom) && (
-                      <button onClick={() => setSettingsId(inst.id)} aria-label="设置" className="h-8 w-8 rounded-[10px] bg-white/15 hover:bg-white/25 flex items-center justify-center text-white"><Settings2 size={14} /></button>
+                      <button onClick={() => setSettingsId(inst.id)} aria-label="设置" className="h-8 w-8 rounded-[10px] bg-fill-3 hover:bg-fill-3 flex items-center justify-center text-fg"><Settings2 size={14} /></button>
                     )}
-                    <button onClick={() => remove(inst.id)} aria-label="删除" className="h-8 w-8 rounded-[10px] bg-white/15 hover:bg-red-500/40 flex items-center justify-center text-white"><Trash2 size={14} /></button>
+                    <button onClick={() => remove(inst.id)} aria-label="删除" className="h-8 w-8 rounded-[10px] bg-fill-3 hover:bg-[color:var(--danger)]/12 flex items-center justify-center text-fg"><Trash2 size={14} /></button>
                   </div>
-                  <span className="text-[11px] text-white/60">{builtin?.name || custom?.name}，拖动可排序</span>
+                  <span className="text-[11px] text-muted">{builtin?.name || custom?.name}，拖动可排序</span>
                 </div>
               )}
             </div>
           );
         })}
         {(editing || !instances.length) && (
-          <button onClick={() => setGallery(true)} className="col-span-1 row-span-1 rounded-[16px] border border-dashed border-white/20 hover:border-white/40 text-[13px] text-[color:var(--muted)] hover:text-[color:var(--text)] flex flex-col items-center justify-center gap-1">
+          <button onClick={() => setGallery(true)} className="col-span-1 row-span-1 rounded-[16px] border border-dashed border-line-strong hover:border-line-strong text-[13px] text-muted hover:text-fg flex flex-col items-center justify-center gap-1">
             <Plus size={18} /> 添加小组件
           </button>
         )}

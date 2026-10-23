@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Sparkles, Loader2, AlertTriangle, X } from 'lucide-react';
 import type { ResolvedAction } from '../../core/ai/actions';
+import Checkbox from '../../ui/Checkbox';
+import { fade, pop } from '../../ui/motion';
 
 export type PlanState =
   | { status: 'thinking'; command: string }
@@ -39,38 +41,38 @@ const PlanPanel: React.FC<Props> = ({ plan, onApply, onCancel, onRetry }) => {
 
   return (
     <div className="fixed inset-0 z-[95] flex items-start justify-center pt-[12vh] px-4">
-      <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} onClick={onCancel} className="absolute inset-0 bg-black/50" />
+      <motion.div variants={fade} initial="hidden" animate="show" exit="exit" onClick={onCancel} className="absolute inset-0 bg-[color:var(--scrim)] backdrop-blur-[3px]" />
       <motion.div
-        initial={{ opacity: 0, y: -8, scale: 0.98 }} animate={{ opacity: 1, y: 0, scale: 1 }} exit={{ opacity: 0, y: -8 }}
-        className="tt-plan relative w-full max-w-[560px] rounded-[20px] overflow-hidden"
+        variants={pop} initial="hidden" animate="show" exit="exit"
+        className="tt-raised relative w-full max-w-[600px] rounded-[22px] overflow-hidden"
         role="dialog" aria-label="AI 操作预览"
       >
         <div className="flex items-start gap-3 p-5">
-          <span className="mt-0.5 w-8 h-8 rounded-full bg-[color:var(--ai)]/15 text-[color:var(--ai)] flex items-center justify-center shrink-0">
+          <span className="mt-0.5 w-8 h-8 rounded-full bg-ai-soft text-ai flex items-center justify-center shrink-0">
             {plan.status === 'thinking' ? <Loader2 size={16} className="animate-spin" /> : <Sparkles size={16} />}
           </span>
           <div className="min-w-0 flex-1">
-            <p className="text-[13px] text-[color:var(--muted)] truncate">“{plan.command}”</p>
-            <p className="text-[15px] text-[color:var(--text)] mt-1 leading-relaxed">
+            <p className="text-[13px] text-muted truncate">“{plan.command}”</p>
+            <p className="text-[15px] text-fg mt-1 leading-relaxed">
               {plan.status === 'thinking' && '正在理解你的书签……'}
               {plan.status === 'ready' && (plan.reply || (plan.actions.length ? '我准备这样做：' : '没有找到可以执行的操作。'))}
               {plan.status === 'error' && plan.error}
             </p>
           </div>
-          <button onClick={onCancel} aria-label="关闭" className="p-1.5 rounded-lg hover:bg-white/10 text-[color:var(--muted)]"><X size={16} /></button>
+          <button onClick={onCancel} aria-label="关闭" className="p-1.5 rounded-lg hover:bg-fill-2 text-muted"><X size={16} /></button>
         </div>
 
         {plan.status === 'ready' && plan.actions.length > 0 && (
           <ul className="max-h-[46vh] overflow-y-auto px-3 pb-2 flex flex-col gap-1">
             {plan.actions.map(a => (
               <li key={a.id}>
-                <label className={`flex items-start gap-3 px-3 py-2.5 rounded-[12px] cursor-pointer hover:bg-white/5 ${a.touchesBrowser ? 'bg-[color:var(--warn)]/6' : ''}`}>
-                  <input type="checkbox" checked={checked.has(a.id)} onChange={() => toggle(a.id)} className="mt-1 accent-sky-300 w-4 h-4" />
+                <label className={`flex items-start gap-3 px-3 py-2.5 rounded-[12px] cursor-pointer hover:bg-fill-1 ${a.touchesBrowser ? 'bg-warn-soft' : ''}`}>
+                  <Checkbox checked={checked.has(a.id)} onChange={() => toggle(a.id)} ariaLabel={a.label} className="mt-0.5" />
                   <span className="min-w-0 flex-1">
-                    <span className="block text-[14px] text-[color:var(--text)]">{a.label}</span>
-                    {a.detail && <span className="block text-[12px] text-[color:var(--muted)] mt-0.5 line-clamp-2">{a.detail}</span>}
+                    <span className="block text-[14px] text-fg">{a.label}</span>
+                    {a.detail && <span className="block text-[12px] text-muted mt-0.5 line-clamp-2">{a.detail}</span>}
                     {a.touchesBrowser && (
-                      <span className="flex items-center gap-1 text-[12px] text-[color:var(--warn)] mt-1">
+                      <span className="flex items-center gap-1 text-[12px] text-warn mt-1">
                         <AlertTriangle size={12} /> 会修改浏览器里的真实书签，默认不勾选
                       </span>
                     )}
@@ -81,14 +83,14 @@ const PlanPanel: React.FC<Props> = ({ plan, onApply, onCancel, onRetry }) => {
           </ul>
         )}
 
-        <div className="flex items-center justify-end gap-2 p-4 border-t border-white/8">
-          {plan.status === 'error' && <button onClick={onRetry} className="h-9 px-4 rounded-[10px] text-[14px] text-[color:var(--text)] hover:bg-white/8">重试</button>}
-          <button onClick={onCancel} className="h-9 px-4 rounded-[10px] text-[14px] text-[color:var(--muted)] hover:bg-white/8">取消</button>
+        <div className="flex items-center justify-end gap-2 p-4 border-t border-line">
+          {plan.status === 'error' && <button onClick={onRetry} className="h-9 px-4 rounded-[10px] text-[14px] text-fg hover:bg-fill-2">重试</button>}
+          <button onClick={onCancel} className="h-9 px-4 rounded-[10px] text-[14px] text-muted hover:bg-fill-2">取消</button>
           {plan.status === 'ready' && plan.actions.length > 0 && (
             <button
               onClick={() => onApply(chosen)}
               disabled={!chosen.length}
-              className="h-9 px-4 rounded-[10px] text-[14px] bg-[color:var(--ai)] text-[#0c1a26] disabled:opacity-40"
+              className="h-9 px-4 rounded-[10px] text-[14px] bg-ai text-on-ai disabled:opacity-40"
             >
               执行 {chosen.length} 项
             </button>

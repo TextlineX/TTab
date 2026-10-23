@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Tag, FolderPlus, ExternalLink, Sparkles, X } from 'lucide-react';
+import { Tag, FolderPlus, ExternalLink, Sparkles, X, FolderInput } from 'lucide-react';
+import { spring } from '../../ui/motion';
 
 interface Props {
   count: number;
@@ -8,13 +9,14 @@ interface Props {
   onAddTag: (tag: string) => void;
   onCreateCollection: (name: string) => void;
   onOpenAll: () => void;
+  onMove?: () => void;
   onAskAI: () => void;
   onSelectAll: () => void;
   onClear: () => void;
 }
 
 /** 多选后的批量操作条 */
-const SelectionBar: React.FC<Props> = ({ count, aiReady, onAddTag, onCreateCollection, onOpenAll, onAskAI, onSelectAll, onClear }) => {
+const SelectionBar: React.FC<Props> = ({ count, aiReady, onAddTag, onCreateCollection, onOpenAll, onMove, onAskAI, onSelectAll, onClear }) => {
   const [mode, setMode] = useState<null | 'tag' | 'collection'>(null);
   const [text, setText] = useState('');
 
@@ -27,11 +29,11 @@ const SelectionBar: React.FC<Props> = ({ count, aiReady, onAddTag, onCreateColle
 
   return (
     <motion.div
-      initial={{ y: 30, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ y: 30, opacity: 0 }}
-      className="tt-pop fixed bottom-6 left-1/2 -translate-x-1/2 z-[80] flex items-center gap-1 p-1.5 rounded-[16px] max-w-[calc(100vw-32px)]"
+      initial={{ y: 30, opacity: 0, x: '-50%' }} animate={{ y: 0, opacity: 1, x: '-50%' }} exit={{ y: 30, opacity: 0, x: '-50%' }} transition={spring.smooth}
+      className="tt-raised fixed bottom-6 left-1/2 z-[80] flex items-center gap-1 p-1.5 rounded-2xl max-w-[calc(100vw-32px)] overflow-x-auto"
       role="toolbar" aria-label="批量操作"
     >
-      <span className="px-3 text-[13px] text-[color:var(--text)] whitespace-nowrap">已选 {count} 个</span>
+      <span className="flex items-center gap-2 px-3 text-[13px] text-fg whitespace-nowrap"><motion.span key={count} initial={{ scale: 0.6 }} animate={{ scale: 1 }} transition={spring.snappy} className="min-w-6 h-6 px-1.5 rounded-full bg-accent text-on-accent text-[12px] font-semibold flex items-center justify-center">{count}</motion.span>已选</span>
       {mode ? (
         <>
           <input
@@ -40,7 +42,7 @@ const SelectionBar: React.FC<Props> = ({ count, aiReady, onAddTag, onCreateColle
             onChange={e => setText(e.target.value)}
             onKeyDown={e => { if (e.key === 'Enter') submit(); if (e.key === 'Escape') setMode(null); }}
             placeholder={mode === 'tag' ? '标签名' : '组合名称'}
-            className="w-40 h-9 px-3 rounded-[10px] bg-white/8 border border-white/15 outline-none text-[13px] text-[color:var(--text)]"
+            className="w-40 h-9 px-3 rounded-xl bg-fill-2 border border-[color:var(--accent-line)] outline-none text-[13px] text-fg"
           />
           <Btn onClick={submit}>确定</Btn>
           <Btn onClick={() => setMode(null)}>取消</Btn>
@@ -49,11 +51,12 @@ const SelectionBar: React.FC<Props> = ({ count, aiReady, onAddTag, onCreateColle
         <>
           <Btn onClick={() => setMode('tag')}><Tag size={14} /> 加标签</Btn>
           <Btn onClick={() => setMode('collection')}><FolderPlus size={14} /> 存为组合</Btn>
+          {onMove && <Btn onClick={onMove}><FolderInput size={14} /> 移动到文件夹</Btn>}
           <Btn onClick={onOpenAll}><ExternalLink size={14} /> 全部打开</Btn>
           {aiReady && <Btn onClick={onAskAI} ai><Sparkles size={14} /> 让 AI 处理</Btn>}
-          <span className="w-px h-5 bg-white/12 mx-1" />
+          <span className="w-px h-5 bg-fill-3 mx-1" />
           <Btn onClick={onSelectAll}>全选</Btn>
-          <button onClick={onClear} aria-label="取消选择" className="p-2 rounded-[10px] text-[color:var(--muted)] hover:bg-white/8"><X size={16} /></button>
+          <button onClick={onClear} aria-label="取消选择" className="p-2 rounded-[10px] text-muted hover:bg-fill-2"><X size={16} /></button>
         </>
       )}
     </motion.div>
@@ -61,7 +64,7 @@ const SelectionBar: React.FC<Props> = ({ count, aiReady, onAddTag, onCreateColle
 };
 
 const Btn: React.FC<{ onClick: () => void; children: React.ReactNode; ai?: boolean }> = ({ onClick, children, ai }) => (
-  <button onClick={onClick} className={`h-9 px-3 rounded-[10px] flex items-center gap-1.5 text-[13px] whitespace-nowrap hover:bg-white/8 ${ai ? 'text-[color:var(--ai)]' : 'text-[color:var(--text)]'}`}>
+  <button onClick={onClick} className={`h-9 px-3 rounded-xl flex items-center gap-1.5 text-[13px] whitespace-nowrap hover:bg-fill-2 transition-colors ${ai ? 'text-ai' : 'text-fg'}`}>
     {children}
   </button>
 );
