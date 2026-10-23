@@ -31,6 +31,17 @@ import { getTranslation } from '../../../utils/i18n';
 
 type DisplayMode = 'tag' | 'tile';
 
+const hashId = (id: string) => {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+  return h;
+};
+
+const getFaviconUrl = (pageUrl?: string) => {
+  if (!pageUrl || typeof chrome === 'undefined' || !chrome.runtime?.id) return '';
+  return `chrome-extension://${chrome.runtime.id}/_favicon/?pageUrl=${encodeURIComponent(pageUrl)}&size=128`;
+};
+
 const BookmarkList: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const { 
@@ -77,17 +88,19 @@ const BookmarkList: React.FC = () => {
   const currentItems = isSearchingActive ? searchResults : bookmarks;
 
   const enrichedItems = useMemo(() => {
-    return currentItems.map((b, idx) => {
+    return currentItems.map((b) => {
+      // 用 id 的哈希生成稳定的尺寸/权重，避免拖拽排序或刷新后布局跳动
+      const h = hashId(b.id);
       let size: 'small' | 'medium' | 'wide' | 'large' = 'medium';
-      if (!b.url) { 
-        size = idx % 4 === 0 ? 'wide' : (idx % 7 === 0 ? 'large' : 'medium');
-      } else { 
-        if (idx % 13 === 0) size = 'large';
-        else if (idx % 5 === 0) size = 'wide';
-        else if (idx % 3 === 0) size = 'medium';
+      if (!b.url) {
+        size = h % 4 === 0 ? 'wide' : (h % 7 === 0 ? 'large' : 'medium');
+      } else {
+        if (h % 13 === 0) size = 'large';
+        else if (h % 5 === 0) size = 'wide';
+        else if (h % 3 === 0) size = 'medium';
         else size = 'small';
       }
-      const weight = !b.url ? 0.7 + (idx % 3) * 0.1 : Math.random();
+      const weight = !b.url ? 0.7 + (h % 3) * 0.1 : (h % 1000) / 1000;
       return { ...b, size, weight };
     });
   }, [currentItems]);
@@ -239,7 +252,7 @@ const BookmarkList: React.FC = () => {
                     <SortableItem key={bm.id} id={bm.id}>
                       <TagItem 
                         id={bm.id} title={bm.title} url={bm.url} 
-                        iconUrl={`chrome-extension://${chrome.runtime.id}/_favicon/?pageUrl=${encodeURIComponent(bm.url || '')}&size=128`} 
+                        iconUrl={getFaviconUrl(bm.url)} 
                         themeColor={bm.color} showColor={tagColorMode} pureTextMode={pureTextMode} weight={bm.weight}
                         maxFontSize={tagMaxSize} allowRotation={tagRotation}
                         parentTitle={bm.parentTitle}
@@ -264,7 +277,7 @@ const BookmarkList: React.FC = () => {
 
       <AnimatePresence>
         {contextMenu && (
-          <ContextMenu {...contextMenu} onClose={() => setContextMenu(null)} onRename={() => { setRenameData({ isOpen: true, id: contextMenu.id, title: contextMenu.title }); setContextMenu(null); }} onDelete={() => { if(confirm('Delete?')) chrome.bookmarks.removeTree(contextMenu.id, () => setBookmarks(prev => prev.filter(b => b.id !== contextMenu.id))); setContextMenu(null); }} onOpen={() => contextMenu.isFolder ? navigateTo(contextMenu.id) : null} />
+          <ContextMenu {...contextMenu} onClose={() => setContextMenu(null)} onRename={() => { setRenameData({ isOpen: true, id: contextMenu.id, title: contextMenu.title }); setContextMenu(null); }} onDelete={() => { if(typeof chrome !== 'undefined' && chrome.bookmarks) chrome.bookmarks.removeTree(contextMenu.id, () => setBookmarks(prev => prev.filter(b => b.id !== contextMenu.id))); setContextMenu(null); }} onOpen={() => contextMenu.isFolder ? navigateTo(contextMenu.id) : null} />
         )}
         {renameData.isOpen && <RenameModal isOpen={renameData.isOpen} initialName={renameData.title} onClose={() => setRenameData({ isOpen: false, id: '', title: '' })} onSave={handleRenameSave} />}
         {isSettingsOpen && <SettingsPanel currentPath={path[path.length - 1] || { id: '0', title: 'ROOT' }} onClose={() => setIsSettingsOpen(false)} onRefresh={refresh} />}

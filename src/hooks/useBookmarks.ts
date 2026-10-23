@@ -89,9 +89,9 @@ export function useBookmarks(searchQuery: string = '') {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  const loadFolder = useCallback(async (folderId: string) => {
+  const loadFolder = useCallback(async (folderId: string, silent = false) => {
     if (folderId === undefined || folderId === '') return;
-    setLoading(true);
+    if (!silent) setLoading(true);
     
     if (typeof chrome !== 'undefined' && chrome.bookmarks) {
       const colorCache = await storage.getColorCache();
@@ -137,6 +137,19 @@ export function useBookmarks(searchQuery: string = '') {
 
   useEffect(() => {
     loadFolder(currentFolderId);
+  }, [currentFolderId, loadFolder]);
+
+  // 监听浏览器书签变化，外部修改时自动刷新当前目录
+  useEffect(() => {
+    if (typeof chrome === 'undefined' || !chrome.bookmarks?.onCreated) return;
+    let timer: ReturnType<typeof setTimeout>;
+    const reload = () => {
+      clearTimeout(timer);
+      timer = setTimeout(() => loadFolder(currentFolderId, true), 150);
+    };
+    const evs = [chrome.bookmarks.onCreated, chrome.bookmarks.onRemoved, chrome.bookmarks.onChanged, chrome.bookmarks.onMoved];
+    evs.forEach(e => e.addListener(reload));
+    return () => { clearTimeout(timer); evs.forEach(e => e.removeListener(reload)); };
   }, [currentFolderId, loadFolder]);
 
   const navigateTo = (id: string) => setCurrentFolderId(id);

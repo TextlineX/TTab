@@ -8,6 +8,10 @@ import {
 import { storage } from '../../../utils/storage';
 import { getTranslation } from '../../../utils/i18n';
 import FolderPicker from './FolderPicker';
+import AISettings from '../../smart/AISettings';
+import DataSettings from '../../smart/DataSettings';
+import SmartSettings from '../../smart/SmartSettings';
+import EmbedSettings from '../../smart/EmbedSettings';
 
 interface SettingsPanelProps {
   currentPath: { id: string, title: string };
@@ -83,6 +87,14 @@ const SettingsPanel: React.FC<SettingsPanelProps> = ({ onClose, onRefresh }) => 
 
         <div className="flex-1 overflow-y-auto p-6 flex flex-col gap-10 no-scrollbar pb-20">
           
+          <AISettings value={config.ai} onSave={ai => update({ ai })} />
+
+          <EmbedSettings value={config.embed} chat={config.ai} onSave={embed => update({ embed })} />
+
+          <SmartSettings />
+
+          <DataSettings />
+
           {/* Section: Language */}
           <section className="flex flex-col gap-4">
             <div className="flex items-center gap-2 text-blue-400/60 font-black uppercase text-[10px] tracking-widest">

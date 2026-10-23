@@ -1,3 +1,6 @@
+import type { AIConfig } from '../core/ai/client';
+import type { EmbedConfig } from '../core/vectors/embedApi';
+
 /**
  * 封装 chrome.storage.local 的异步操作
  */
@@ -42,7 +45,14 @@ export const storage = {
       containerWidth: 960,
       language: 'auto',
       useCustomFont: true,
-      wallpaper: ''
+      wallpaper: '',
+      /** 首页：smart = 智能视图（标签/组合/AI），folder = 原来的文件夹磁贴视图 */
+      homeView: 'smart' as 'smart' | 'folder',
+      ai: undefined as Partial<AIConfig> | undefined,
+      /** 语义向量：默认只用本地向量 */
+      embed: undefined as Partial<EmbedConfig> | undefined,
+      /** 新收藏的书签自动归入最合适的已有文件夹 */
+      autoFile: false,
     };
     const saved = await storage.get('app_settings');
     return { ...defaults, ...saved };

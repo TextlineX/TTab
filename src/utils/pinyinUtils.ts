@@ -1,67 +1,107 @@
 /**
- * 极简拼音首字母映射工具
- * 用于支持搜索时的拼音匹配（首字母匹配）
+ * 拼音匹配：支持全拼、首字母、混合输入，多音字任一读音都能匹配。
+ *   "知乎"  ← zhihu / zh / zhh / zhih / 知h
+ *   "哔哩哔哩" ← bilibili / blbl / bili
  */
+import { PINYIN_DATA } from './pinyinData';
 
-const PINYIN_MAP: Record<string, string> = {
-  'a': '阿啊呵腌嗄吖',
-  'b': '吧把八百办被本不步比并别变表并别部兵病并',
-  'c': '才采才参草层查产长常场厂成程吃出处传船次从村才层',
-  'd': '大到第地当代带但导等低点电店定度端对多等得点',
-  'e': '而二儿耳额饿恩',
-  'f': '发法反方分风封夫服复父副分反方分',
-  'g': '个各各给更工公共关管光广国过该各个',
-  'h': '哈还海汉好号和合何河和黑很红后候花华话回会或合',
-  'j': '几及极集级即计记济加家假价件见建间将江讲交教解接节结解今金进近京经旧就举句级即',
-  'k': '卡开看可渴克刻客课空口快块看可',
-  'l': '拉来蓝老乐离里理力立连联量两列料林临流六龙路里理力',
-  'm': '马买卖满慢忙毛每美门们面民明名命么没每',
-  'n': '那南难内能你年念宁农弄那南',
-  'o': '哦欧偶',
-  'p': '怕排旁跑朋皮篇片平评破品平',
-  'q': '七期其奇气起前强切亲轻青清情区全权其起',
-  'r': '然让热人认任日如入人认',
-  's': '三色山商上少设社身深什神声生师失十实使世市示事试视收手守首受书术树数水说四似所上身',
-  't': '它台太谈特提题体天田条铁听同通统图土推条天同',
-  'w': '外完万王网望位未味问我五武物务万位',
-  'x': '西习喜下先现线相详响向项小校些写新心信星行形许序学寻训西先现',
-  'y': '压雅亚烟严言岩沿研眼演羊样阳要药耀一医已以议意因音阴银应英影硬用由右于语玉育预原圆远月用以',
-  'z': '再在早造则泽怎增战站张章丈照这者真正证知之职直指纸中重种主助住注自总走最作在正知中'
-};
+let table: Map<string, string[]> | null = null;
+
+function getTable(): Map<string, string[]> {
+  if (table) return table;
+  table = new Map();
+  // 主读音在前、次要读音（~ 前缀）在后，保证每个字的第一个读音是最常用的
+  for (const group of PINYIN_DATA.split('|')) {
+    const i = group.indexOf(':');
+    const py = group.slice(group.startsWith('~') ? 1 : 0, i);
+    for (const ch of group.slice(i + 1)) {
+      const list = table.get(ch);
+      if (list) list.push(py); else table.set(ch, [py]);
+    }
+  }
+  return table;
+}
+
+/** 单个字的所有读音（非汉字返回 null） */
+export function readingsOf(ch: string): string[] | null {
+  return getTable().get(ch) || null;
+}
+
+/** 拼音首字母串（多音字取第一个读音），保留给旧代码使用 */
+export function getPinyinInitials(str: string): string {
+  let out = '';
+  for (const ch of str) {
+    const r = readingsOf(ch);
+    out += r ? r[0][0] : ch.toLowerCase();
+  }
+  return out;
+}
+
+/** 完整拼音串（多音字取第一个读音） */
+export function getPinyinFull(str: string): string {
+  let out = '';
+  for (const ch of str) {
+    const r = readingsOf(ch);
+    out += r ? r[0] : ch.toLowerCase();
+  }
+  return out;
+}
+
+const DOUBLE_INITIALS = ['zh', 'ch', 'sh'];
 
 /**
- * 获取字符串的拼音首字母串
+ * 判断 query 能否从 text 的某个位置开始连续匹配。
+ * 每个汉字可以用：完整拼音、首字母、zh/ch/sh 双字母声母，或（在末尾）拼音前缀来匹配。
  */
-export function getPinyinInitials(str: string): string {
-  let initials = '';
-  for (const char of str) {
-    let found = false;
-    for (const [key, chars] of Object.entries(PINYIN_MAP)) {
-      if (chars.includes(char)) {
-        initials += key;
-        found = true;
-        break;
+function matchAt(chars: string[], start: number, q: string): boolean {
+  const memo = new Map<number, boolean>();
+  const go = (i: number, j: number): boolean => {
+    if (j >= q.length) return true;
+    if (i >= chars.length) return false;
+    const k = i * 1000 + j;
+    const hit = memo.get(k);
+    if (hit !== undefined) return hit;
+    let ok = false;
+    const ch = chars[i];
+    const reads = readingsOf(ch);
+    if (!reads) {
+      ok = ch.toLowerCase() === q[j] && go(i + 1, j + 1);
+    } else if (ch === q[j]) {
+      ok = go(i + 1, j + 1); // 直接输入汉字
+    } else {
+      const rest = q.slice(j);
+      for (const r of reads) {
+        if (rest.startsWith(r) && go(i + 1, j + r.length)) { ok = true; break; }
+        if (r.startsWith(rest)) { ok = true; break; } // 查询在这个字的拼音中途结束
+        const di = DOUBLE_INITIALS.find(d => r.startsWith(d));
+        if (di && rest.startsWith(di) && go(i + 1, j + 2)) { ok = true; break; }
+        if (r[0] === q[j] && go(i + 1, j + 1)) { ok = true; break; }
       }
     }
-    if (!found) initials += char.toLowerCase();
-  }
-  return initials;
+    memo.set(k, ok);
+    return ok;
+  };
+  return go(start, 0);
 }
 
 /**
- * 判断搜索词是否匹配字符串（支持原词匹配和拼音首字母匹配）
+ * 判断搜索词是否匹配字符串（原文包含、或拼音全拼/首字母/混合匹配）
  */
 export function pinyinMatch(text: string, query: string): boolean {
   if (!text || !query) return false;
-  const normalizedText = text.toLowerCase();
-  const normalizedQuery = query.toLowerCase();
-  
-  // 1. 原词直接匹配
-  if (normalizedText.includes(normalizedQuery)) return true;
-  
-  // 2. 拼音首字母匹配
-  const initials = getPinyinInitials(normalizedText);
-  if (initials.includes(normalizedQuery)) return true;
-  
+  const t = text.toLowerCase();
+  const q = query.toLowerCase().replace(/\s+/g, '');
+  if (!q) return false;
+  if (t.includes(q)) return true;
+  if (!/[a-z]/.test(q)) return false; // 不含字母时没有拼音可匹配
+  const chars = [...t].slice(0, 80);
+  if (!chars.some(c => readingsOf(c))) return false;
+  for (let s = 0; s < chars.length; s++) {
+    const c = chars[s];
+    const r = readingsOf(c);
+    // 起点剪枝：首字符必须对得上
+    if (r ? !(r.some(x => x[0] === q[0]) || c === q[0]) : c !== q[0]) continue;
+    if (matchAt(chars, s, q)) return true;
+  }
   return false;
 }

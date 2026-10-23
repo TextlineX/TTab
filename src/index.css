@@ -15,6 +15,7 @@
     --system-font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   }
 
+  html { background: #0a0a0a; }
   body {
     @apply m-0 min-h-screen bg-transparent text-white antialiased;
   }
@@ -34,3 +35,127 @@
 ::-webkit-scrollbar-track { @apply bg-transparent; }
 ::-webkit-scrollbar-thumb { @apply bg-white/10 hover:bg-white/20 transition-colors; }
 *:focus { outline: none; }
+
+/* ------------------------------------------------------------------ */
+/* 智能视图                                                             */
+/* 颜色语义：--ai 只用于 AI 相关操作；--warn 只用于会改动浏览器书签的提醒 */
+/* ------------------------------------------------------------------ */
+:root {
+  --text: #f2f0eb;
+  --muted: rgb(242 240 235 / 0.56);
+  --panel: rgb(22 24 30 / 0.62);
+  --panel-solid: rgb(24 26 32 / 0.96);
+  --line: rgb(255 255 255 / 0.09);
+  --ai: #7cc4ff;
+  --warn: #f5b94a;
+}
+
+.tt-greet {
+  font-family: 'Xiaolai SC', var(--custom-font);
+  letter-spacing: 0.02em;
+  text-shadow: 0 2px 24px rgb(0 0 0 / 0.35);
+}
+
+.tt-command {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  backdrop-filter: blur(24px) saturate(140%);
+  box-shadow: 0 10px 40px -12px rgb(0 0 0 / 0.5);
+}
+.tt-command-focus {
+  border-color: rgb(255 255 255 / 0.22);
+  box-shadow: 0 0 0 4px rgb(124 196 255 / 0.12), 0 14px 50px -12px rgb(0 0 0 / 0.6);
+}
+.tt-ai-btn {
+  color: #0c1a26;
+  background: var(--ai);
+}
+.tt-ai-btn:hover { filter: brightness(1.08); }
+
+.tt-quick {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 30px;
+  padding: 5px 12px;
+  border-radius: 15px;
+  text-align: left;
+  font-size: 13px;
+  color: var(--muted);
+  background: rgb(255 255 255 / 0.04);
+  border: 1px solid var(--line);
+  backdrop-filter: blur(12px);
+  transition: color .15s, border-color .15s;
+}
+.tt-quick:hover { color: var(--text); border-color: rgb(255 255 255 / 0.2); }
+.tt-quick-ai { color: var(--ai); border-color: rgb(124 196 255 / 0.3); }
+
+.tt-pop {
+  background: var(--panel-solid);
+  border: 1px solid rgb(255 255 255 / 0.12);
+  box-shadow: 0 20px 60px -10px rgb(0 0 0 / 0.65);
+  backdrop-filter: blur(24px);
+}
+
+.tt-grid { grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); }
+
+.tt-card {
+  background: var(--panel);
+  border: 1px solid transparent;
+  backdrop-filter: blur(18px);
+}
+.tt-card:hover { background: rgb(34 37 45 / 0.72); border-color: var(--line); }
+.tt-card:focus-visible { outline: 2px solid var(--ai); outline-offset: 2px; }
+.tt-card-selected { border-color: rgb(124 196 255 / 0.55); background: rgb(30 44 58 / 0.7); }
+
+/* 我的组合：实心面板；推荐组合：虚线边，表示"还没保存，只是建议" */
+.tt-collection {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  backdrop-filter: blur(18px);
+}
+.tt-combo {
+  background: rgb(22 24 30 / 0.35);
+  border: 1px dashed rgb(255 255 255 / 0.18);
+  backdrop-filter: blur(18px);
+}
+.tt-collection:hover, .tt-combo:hover { border-color: rgb(255 255 255 / 0.24); }
+.tt-collection-on { border: 1px solid var(--text) !important; }
+.tt-shelf-row { scrollbar-width: thin; }
+
+.tt-drawer {
+  background: var(--panel-solid);
+  border-left: 1px solid var(--line);
+  box-shadow: -20px 0 60px -20px rgb(0 0 0 / 0.6);
+}
+.tt-plan {
+  background: var(--panel-solid);
+  border: 1px solid rgb(255 255 255 / 0.12);
+  box-shadow: 0 30px 80px -20px rgb(0 0 0 / 0.7);
+}
+
+button:focus-visible, a:focus-visible, [role="button"]:focus-visible, .tt-drawer input:focus-visible {
+  outline: 2px solid var(--ai);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; }
+}
+
+/* ------------------------------------------------------------------ */
+/* 小组件                                                               */
+/* ------------------------------------------------------------------ */
+.tt-widget-grid { grid-auto-rows: 132px; grid-auto-flow: dense; }
+.tt-widget {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  backdrop-filter: blur(18px);
+}
+.tt-widget-editing { cursor: grab; border-style: dashed; border-color: rgb(255 255 255 / 0.25); }
+.tt-preview-stage {
+  background:
+    radial-gradient(circle at 20% 10%, rgb(80 90 160 / 0.35), transparent 60%),
+    linear-gradient(160deg, #141826, #0b0c10);
+  border: 1px solid var(--line);
+}

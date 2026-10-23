@@ -1,6 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { Bookmark, Check, ChevronRight } from 'lucide-react';
 import { storage } from '../utils/storage';
+import { loadMeta, saveMeta } from '../core/metaStore';
+import { addTags, markTagged } from '../core/library';
+import { getDomain, normalizeTag, normalizeUrl } from '../core/normalize';
+import { inferRuleTags, suggestFromVocabulary } from '../core/ruleTagger';
+import { tagChipStyle } from './smart/tagColor';
 
 const PopupApp: React.FC = () => {
   const [title, setTitle] = useState('Loading...');
@@ -8,6 +13,33 @@ const PopupApp: React.FC = () => {
   const [folders, setFolders] = useState<{id: string, title: string}[]>([]);
   const [selectedFolder, setSelectedFolder] = useState({ id: '1', title: 'Bookmarks Bar' });
   const [isSaved, setIsSaved] = useState(false);
+  const [tags, setTags] = useState<string[]>([]);
+  const [suggested, setSuggested] = useState<string[]>([]);
+  const [tagDraft, setTagDraft] = useState('');
+  const [folderPath, setFolderPath] = useState<string[]>([]);
+
+  // 根据网址、标题和已有标签词表推荐标签
+  useEffect(() => {
+    if (!url) return;
+    loadMeta().then(meta => {
+      const counts = new Map<string, number>();
+      Object.values(meta.pages).forEach(p => p.tags.forEach(t => counts.set(t.name, (counts.get(t.name) || 0) + 1)));
+      const vocab = [...counts.entries()].sort((a, b) => b[1] - a[1]).map(([t]) => t);
+      const existing = meta.pages[normalizeUrl(url)]?.tags.map(t => t.name) || [];
+      const rule = inferRuleTags({ title, url, domain: getDomain(url), folderPath });
+      const sug = [...new Set([...existing, ...rule, ...suggestFromVocabulary(title, vocab)])];
+      setSuggested(sug.slice(0, 8));
+      setTags(prev => (prev.length ? prev : sug.slice(0, 3)));
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [url, folderPath]);
+
+  const toggleTag = (t: string) => setTags(prev => (prev.includes(t) ? prev.filter(x => x !== t) : [...prev, t]));
+  const addDraft = () => {
+    const t = normalizeTag(tagDraft);
+    if (t) { setTags(prev => (prev.includes(t) ? prev : [...prev, t])); setSuggested(prev => (prev.includes(t) ? prev : [...prev, t])); }
+    setTagDraft('');
+  };
 
   const applyFont = async () => {
     const settings = await storage.getSettings();
@@ -47,7 +79,8 @@ const PopupApp: React.FC = () => {
     }
 
     storage.getSettings().then(s => {
-      if (s.defaultFolderId) {
+      // '0' 是书签树根节点，不能直接放书签
+      if (s.defaultFolderId && s.defaultFolderId !== '0') {
         setSelectedFolder(prev => ({ ...prev, id: s.defaultFolderId }));
       }
     });
@@ -59,7 +92,12 @@ const PopupApp: React.FC = () => {
         parentId: selectedFolder.id,
         title: title,
         url: url
-      }, () => {
+      }, async () => {
+        if (tags.length) {
+          const key = normalizeUrl(url);
+          const meta = await loadMeta();
+          await saveMeta(markTagged(addTags(meta, [key], tags, 'manual'), [key], 'rule'));
+        }
         setIsSaved(true);
         setTimeout(() => window.close(), 1200);
       });
@@ -68,7 +106,7 @@ const PopupApp: React.FC = () => {
 
   return (
     <div 
-      style={{ width: '350px', height: '450px' }} 
+      style={{ width: '350px', height: '540px' }} 
       className={`bg-[#0a0a0a] text-white flex flex-col overflow-hidden border border-white/10`}
     >
       {isSaved ? (
@@ -101,13 +139,34 @@ const PopupApp: React.FC = () => {
                   {folders.map(f => (
                     <button 
                       key={f.id}
-                      onClick={() => setSelectedFolder(f)}
+                      onClick={() => { setSelectedFolder(f); setFolderPath([f.title]); }}
                       className={`px-3 py-2.5 text-[10px] font-bold border transition-all truncate text-left ${selectedFolder.id === f.id ? 'bg-[#0078D4] border-[#0078D4] text-white' : 'bg-white/5 border-white/10 text-white/40 hover:text-white'}`}
                     >
                       {f.id === '1' ? 'Bar' : f.id === '2' ? 'Other' : f.title}
                     </button>
                   ))}
                 </div>
+              </div>
+            </div>
+            <div className="flex flex-col gap-1.5">
+              <label className="text-[10px] font-black text-white/30 uppercase tracking-widest">Tags</label>
+              <div className="flex flex-wrap gap-1.5">
+                {suggested.map(t => (
+                  <button
+                    key={t}
+                    onClick={() => toggleTag(t)}
+                    style={tagChipStyle(t, tags.includes(t) ? 'solid' : 'ghost')}
+                    className="px-2 h-6 rounded-full border text-[11px]"
+                  >{t}</button>
+                ))}
+                <input
+                  value={tagDraft}
+                  onChange={e => setTagDraft(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter') { e.preventDefault(); addDraft(); } }}
+                  onBlur={addDraft}
+                  placeholder="+ 标签"
+                  className="w-20 h-6 px-2 bg-white/5 border border-white/10 text-[11px] text-white outline-none focus:border-[#0078D4]"
+                />
               </div>
             </div>
             <div className="mt-auto">

@@ -15,6 +15,11 @@ export default defineConfig({
       input: {
         main: resolve(__dirname, 'index.html'),
         popup: resolve(__dirname, 'popup.html'),
+        // 后台 service worker：manifest 里需要固定文件名
+        background: resolve(__dirname, 'src/background.ts'),
+      },
+      output: {
+        entryFileNames: chunk => (chunk.name === 'background' ? 'background.js' : 'assets/[name]-[hash].js'),
       },
     },
   },
