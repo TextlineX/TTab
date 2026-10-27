@@ -75,25 +75,32 @@ export interface FolderNode {
   total: number;
 }
 
+/** 文件夹树：用 id 关系建树（同名文件夹不会合并），同级按浏览器里的顺序排 */
 export function folderTree(folders: FolderRecord[], items: LibraryItem[]): FolderNode[] {
   const direct = new Map<string, number>();
   for (const it of items) if (it.parentId) direct.set(it.parentId, (direct.get(it.parentId) || 0) + 1);
-  const byPath = new Map<string, FolderNode>(folders.map(f => [f.path.join('\u0000'), { folder: f, children: [], direct: direct.get(f.id) || 0, total: 0 }]));
+  const nodes = new Map<string, FolderNode>(folders.map(f => [f.id, { folder: f, children: [], direct: direct.get(f.id) || 0, total: 0 }]));
   const roots: FolderNode[] = [];
-  for (const n of byPath.values()) {
-    const parent = byPath.get(n.folder.path.slice(0, -1).join('\u0000'));
+  for (const n of nodes.values()) {
+    const parent = n.folder.parentId ? nodes.get(n.folder.parentId) : undefined;
     (parent ? parent.children : roots).push(n);
   }
-  const sum = (n: FolderNode): number => (n.total = n.direct + n.children.reduce((s, c) => s + sum(c), 0));
+  const byIndex = (a: FolderNode, b: FolderNode) => (a.folder.index ?? 0) - (b.folder.index ?? 0);
+  const sum = (n: FolderNode): number => { n.children.sort(byIndex); return (n.total = n.direct + n.children.reduce((s, c) => s + sum(c), 0)); };
+  roots.sort(byIndex);
   roots.forEach(sum);
   return roots;
 }
 
-function descendantIds(folders: FolderRecord[], id: string): Set<string> {
-  const target = folders.find(f => f.id === id);
-  if (!target) return new Set([id]);
-  const prefix = target.path.join('\u0000');
-  return new Set(folders.filter(f => f.path.join('\u0000') === prefix || f.path.join('\u0000').startsWith(prefix + '\u0000')).map(f => f.id));
+/** 文件夹自己和它所有子孙文件夹的 id */
+export function descendantIds(folders: FolderRecord[], id: string): Set<string> {
+  const out = new Set<string>([id]);
+  let grew = true;
+  while (grew) {
+    grew = false;
+    for (const f of folders) if (f.parentId && out.has(f.parentId) && !out.has(f.id)) { out.add(f.id); grew = true; }
+  }
+  return out;
 }
 
 const isLooseItem = (it: LibraryItem) => it.folderPath.every(f => isGenericFolder(f));

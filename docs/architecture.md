@@ -36,3 +36,11 @@ UI 逻辑分为两个主要图层，定义在 `src/components/layers/`：
 - **动画**: framer-motion
 - **图标库**: lucide-react
 - **构建工具**: Vite 8.0
+
+## 云端与同步（0.7）
+
+- `src/core/cloud/sync.ts`：纯函数。`stampChanges` 在 `useLibrary.update/commitNow` 里给变化的网页/组合盖 `updatedAt`、给被删的组合记墓碑；`mergeRemote` 把服务器返回的变化合并进本机（后修改者优先，打开次数取大）；`buildPush` 挑出自上次推送以来的修改。云端变化通过 `applyExternal` 应用，不盖时间戳、不进撤销历史。
+- `src/core/cloud/community.ts`：网址只以 SHA-256 哈希出现；`buildProposals` 只对没有手动标签的网页给建议，纠正只针对 AI/规则标签，且需要至少 2 个网页级共识标签；新增的标签来源是 `cloud`（优先级低于 AI、高于规则）。
+- `src/core/cloud/mirror.ts`：`chrome.storage.sync` 里只放外观/首页设置，超过 1500 字符的字段（如背景图）会被剔除。
+- `src/state/useCloud.ts`：所有开关默认关闭；同步在打开页面、修改后 6 秒、每 5 分钟、切回页面时进行。令牌和服务器地址只在 `chrome.storage.local`，不进导出文件。
+- `server/`：见 `server/README.md`。

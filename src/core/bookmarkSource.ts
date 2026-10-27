@@ -15,7 +15,7 @@ const ROOT_IDS = new Set(['0', 'root________']);
 export function flattenTree(tree: Node[]): { records: BookmarkRecord[]; folders: FolderRecord[] } {
   const records: BookmarkRecord[] = [];
   const folders: FolderRecord[] = [];
-  const walk = (nodes: Node[], path: string[], depth: number, parent?: string) => {
+  const walk = (nodes: Node[], path: string[], depth: number, parent?: string, parentIsRoot = true) => {
     for (const n of nodes) {
       if (n.url) {
         records.push({
@@ -32,8 +32,8 @@ export function flattenTree(tree: Node[]): { records: BookmarkRecord[]; folders:
         // 只有最顶层的根节点不计入路径（Edge/Chrome 中 id 为 '0'）
         const isRoot = depth === 0 || ROOT_IDS.has(n.id);
         const nextPath = isRoot ? path : [...path, n.title || '未命名'];
-        if (!isRoot) folders.push({ id: n.id, title: n.title || '未命名', path: nextPath });
-        if (n.children) walk(n.children, nextPath, depth + 1, n.id);
+        if (!isRoot) folders.push({ id: n.id, title: n.title || '未命名', path: nextPath, parentId: parentIsRoot ? undefined : parent, index: n.index });
+        if (n.children) walk(n.children, nextPath, depth + 1, n.id, isRoot);
       }
     }
   };

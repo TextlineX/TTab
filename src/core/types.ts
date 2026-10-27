@@ -9,7 +9,7 @@
  */
 
 /** 标签来源：手动 > AI > 规则。手动标签永远不会被自动流程覆盖 */
-export type TagSource = 'manual' | 'ai' | 'rule';
+export type TagSource = 'manual' | 'ai' | 'rule' | 'cloud';
 
 export interface TagEntry {
   name: string;
@@ -27,6 +27,8 @@ export interface PageMeta {
   ruleTaggedAt?: number;
   opens?: number;         // 通过 TTab 打开的次数
   lastOpened?: number;
+  /** 最后一次修改的时间，云同步用它判断谁新（本机修改时自动写入） */
+  updatedAt?: number;
 }
 
 /** 标签查询：用于动态集合和筛选 */
@@ -47,6 +49,7 @@ export interface Collection {
   pinned?: boolean;
   source: 'manual' | 'ai' | 'auto';
   createdAt: number;
+  updatedAt?: number;
 }
 
 /** 持久化的智能数据 */
@@ -54,6 +57,8 @@ export interface MetaState {
   version: 1;
   pages: Record<string, PageMeta>;
   collections: Collection[];
+  /** 被删除的组合 id → 删除时间；云同步靠它把删除传给其他浏览器 */
+  tombstones?: Record<string, number>;
 }
 
 /** 从浏览器书签扁平化出来的一条记录 */
@@ -72,6 +77,10 @@ export interface FolderRecord {
   id: string;
   title: string;
   path: string[];         // 含自身
+  /** 父文件夹的 id；顶层文件夹（收藏夹栏等）没有 */
+  parentId?: string;
+  /** 在父文件夹里的位置 */
+  index?: number;
 }
 
 /** UI 使用的合成条目 */

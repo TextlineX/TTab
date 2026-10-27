@@ -1,5 +1,5 @@
 /** 智能数据持久化：chrome.storage.local（扩展）或 localStorage（开发） */
-import { emptyMeta, type MetaState } from './types';
+import { emptyMeta, type MetaState, type TagSource } from './types';
 
 const KEY = 'ttab_meta_v1';
 const hasChromeStorage = () => typeof chrome !== 'undefined' && !!chrome.storage?.local;
@@ -44,7 +44,7 @@ export function sanitizeMeta(raw: unknown): MetaState {
     for (const [k, p] of Object.entries(r.pages)) {
       if (!p || typeof p !== 'object') continue;
       const tags = Array.isArray(p.tags)
-        ? p.tags.filter(t => t && typeof t.name === 'string').map(t => ({ name: t.name, source: (['manual', 'ai', 'rule'].includes(t.source) ? t.source : 'manual') as 'manual' | 'ai' | 'rule' }))
+        ? p.tags.filter(t => t && typeof t.name === 'string').map(t => ({ name: t.name, source: (['manual', 'ai', 'rule', 'cloud'].includes(t.source) ? t.source : 'manual') as TagSource }))
         : [];
       pages[k] = { ...p, key: k, tags };
     }
@@ -53,7 +53,11 @@ export function sanitizeMeta(raw: unknown): MetaState {
     ? r.collections.filter(c => c && typeof c.id === 'string' && typeof c.name === 'string')
       .map(c => ({ ...c, keys: Array.isArray(c.keys) ? c.keys : [] }))
     : [];
-  return { version: 1, pages, collections };
+  const tombstones: Record<string, number> = {};
+  if (r.tombstones && typeof r.tombstones === 'object') {
+    for (const [id, at] of Object.entries(r.tombstones)) if (typeof at === 'number') tombstones[id] = at;
+  }
+  return Object.keys(tombstones).length ? { version: 1, pages, collections, tombstones } : { version: 1, pages, collections };
 }
 
 /** 导出：智能数据 + 书签 URL 清单（导入到另一个浏览器时可补建缺失书签） */

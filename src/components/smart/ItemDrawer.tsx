@@ -26,7 +26,7 @@ interface Props {
   onDeleteBookmark: (item: LibraryItem) => void;
 }
 
-const SOURCE_LABEL: Record<TagSource, string> = { manual: '手动', ai: 'AI', rule: '自动' };
+const SOURCE_LABEL: Record<TagSource, string> = { manual: '手动', ai: 'AI', rule: '自动', cloud: '云端' };
 
 const ItemDrawer: React.FC<Props> = ({ item, items, meta, index, ai, onClose, update, onOpen, onShowItem, onRenameBookmark, onDeleteBookmark }) => {
   const [draft, setDraft] = useState('');

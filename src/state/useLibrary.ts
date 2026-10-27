@@ -7,6 +7,7 @@ import { emptyMeta } from '../core/types';
 import { loadAllBookmarks, subscribeBookmarkChanges } from '../core/bookmarkSource';
 import { loadMeta, saveMeta, subscribeMeta } from '../core/metaStore';
 import { applyRuleTags, buildItems } from '../core/library';
+import { stampChanges } from '../core/cloud/sync';
 import { computeUsage, emptyUsage, hasHistoryPermission, loadUsage, saveUsage, USAGE_TTL, type UsageState } from '../core/usage';
 
 const HISTORY_LIMIT = 30;
@@ -21,6 +22,8 @@ export interface Library {
   update: (fn: (s: MetaState) => MetaState, label?: string) => void;
   undo: () => string | null;
   commitNow: (fn: (s: MetaState) => MetaState) => Promise<void>;
+  /** 应用来自云端的变化：不盖时间戳、不进撤销历史 */
+  applyExternal: (fn: (s: MetaState) => MetaState) => void;
   canUndo: boolean;
   lastLabel: string | null;
   reloadBookmarks: () => Promise<void>;
@@ -95,8 +98,9 @@ export function useLibrary(): Library {
 
   const update = useCallback((fn: (s: MetaState) => MetaState, label = '修改') => {
     const prev = metaRef.current;
-    const next = fn(prev);
-    if (next === prev) return;
+    const raw = fn(prev);
+    if (raw === prev) return;
+    const next = stampChanges(prev, raw);
     history.current = [...history.current.slice(-HISTORY_LIMIT + 1), { state: prev, label }];
     setHistoryLen(history.current.length);
     metaRef.current = next;
@@ -116,13 +120,22 @@ export function useLibrary(): Library {
 
   /** 不进撤销历史、立即落盘（用于记录打开次数这类马上要跳转页面的场景） */
   const commitNow = useCallback(async (fn: (s: MetaState) => MetaState) => {
-    const next = fn(metaRef.current);
+    const prev = metaRef.current;
+    const next = stampChanges(prev, fn(prev));
     metaRef.current = next;
     setMeta(next);
     clearTimeout(saveTimer.current);
     lastSaved.current = JSON.stringify(next);
     await saveMeta(next);
   }, []);
+
+  const applyExternal = useCallback((fn: (s: MetaState) => MetaState) => {
+    const next = fn(metaRef.current);
+    if (next === metaRef.current) return;
+    metaRef.current = next;
+    setMeta(next);
+    persist(next);
+  }, [persist]);
 
   // 设置面板导入数据后刷新（开发模式下没有 storage.onChanged）
   useEffect(() => {
@@ -172,7 +185,7 @@ export function useLibrary(): Library {
   const items = useMemo(() => buildItems(records, meta, usage), [records, meta, usage]);
 
   return {
-    ready, records, folders, items, meta, update, undo, commitNow,
+    ready, records, folders, items, meta, update, undo, commitNow, applyExternal,
     canUndo: historyLen > 0,
     lastLabel: history.current[history.current.length - 1]?.label ?? null,
     reloadBookmarks,

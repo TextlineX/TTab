@@ -14,6 +14,8 @@ interface Props {
   /** 每个文件夹里的书签数（可选，显示在右侧） */
   counts?: Map<string, number>;
   confirmLabel?: string;
+  /** 不能选的文件夹（移动文件夹时，自己和子孙不能作为目标） */
+  disabledIds?: Set<string>;
   onPick: (folderId: string) => void;
   onClose: () => void;
 }
@@ -21,24 +23,27 @@ interface Props {
 interface Node { f: FolderRecord; children: Node[] }
 
 /** 文件夹选择器：树形浏览 + 搜索（支持拼音），双击直接选择 */
-const FolderPicker: React.FC<Props> = ({ folders, title = '选择文件夹', subtitle, value, counts, confirmLabel = '选择', onPick, onClose }) => {
+const FolderPicker: React.FC<Props> = ({ folders, title = '选择文件夹', subtitle, value, counts, confirmLabel = '选择', disabledIds, onPick, onClose }) => {
   const [sel, setSel] = useState<string | undefined>(value);
   const [q, setQ] = useState('');
   const [open, setOpen] = useState<Set<string>>(() => {
     // 默认展开到当前选中项
-    const s = new Set<string>(folders.filter(f => f.path.length === 1).map(f => f.id));
-    const cur = folders.find(f => f.id === value);
-    if (cur) folders.filter(f => cur.path.slice(0, -1).join('/').startsWith(f.path.join('/'))).forEach(f => s.add(f.id));
+    const s = new Set<string>(folders.filter(f => !f.parentId).map(f => f.id));
+    // 展开到当前选中项
+    for (let cur = folders.find(f => f.id === value); cur?.parentId; cur = folders.find(f => f.id === cur!.parentId)) s.add(cur.parentId);
     return s;
   });
 
   const tree = useMemo(() => {
-    const byPath = new Map(folders.map(f => [f.path.join('/'), { f, children: [] as Node[] }]));
+    const nodes = new Map(folders.map(f => [f.id, { f, children: [] as Node[] }]));
     const roots: Node[] = [];
-    for (const n of byPath.values()) {
-      const parent = byPath.get(n.f.path.slice(0, -1).join('/'));
+    for (const n of nodes.values()) {
+      const parent = n.f.parentId ? nodes.get(n.f.parentId) : undefined;
       (parent ? parent.children : roots).push(n);
     }
+    const byIndex = (a: Node, b: Node) => (a.f.index ?? 0) - (b.f.index ?? 0);
+    const sortAll = (list: Node[]) => { list.sort(byIndex); list.forEach(n => sortAll(n.children)); };
+    sortAll(roots);
     return roots;
   }, [folders]);
 
@@ -50,9 +55,10 @@ const FolderPicker: React.FC<Props> = ({ folders, title = '选择文件夹', sub
       key={f.id}
       role="treeitem"
       aria-selected={sel === f.id}
-      onClick={() => setSel(f.id)}
-      onDoubleClick={() => onPick(f.id)}
-      className={`flex items-center gap-1.5 h-9 pr-3 rounded-xl cursor-pointer text-[13.5px] ${sel === f.id ? 'bg-accent-soft text-fg' : 'hover:bg-fill-1 text-fg'}`}
+      aria-disabled={disabledIds?.has(f.id) || undefined}
+      onClick={() => { if (!disabledIds?.has(f.id)) setSel(f.id); }}
+      onDoubleClick={() => { if (!disabledIds?.has(f.id)) onPick(f.id); }}
+      className={`flex items-center gap-1.5 h-9 pr-3 rounded-xl text-[13.5px] ${disabledIds?.has(f.id) ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'} ${sel === f.id ? 'bg-accent-soft text-fg' : disabledIds?.has(f.id) ? 'text-fg' : 'hover:bg-fill-1 text-fg'}`}
       style={{ paddingLeft: 8 + depth * 18 }}
     >
       <button

@@ -1,11 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Sparkles, Loader2, Undo2, X, CornerDownLeft, Menu as MenuIcon, ExternalLink, AppWindow, Tags, Link2, FolderInput, CheckSquare, Trash2 } from 'lucide-react';
+import { Sparkles, Loader2, Undo2, X, CornerDownLeft, Menu as MenuIcon, ExternalLink, AppWindow, Tags, Link2, FolderInput, CheckSquare, Trash2, ArrowUpToLine, ArrowDown, ArrowUp, Pencil, FolderPlus } from 'lucide-react';
 
 import { useLibrary } from '../../state/useLibrary';
+import { useCloud } from '../../state/useCloud';
 import { useSettings } from '../../state/useSettings';
 import { useSemantic, useVectorStatus } from '../../state/useSemantic';
-import type { LibraryItem } from '../../core/types';
+import type { FolderRecord, LibraryItem } from '../../core/types';
 import { addTags, markTagged, matchQuery, recordOpen, setSummary, upsertCollection, deleteCollection, resolveCollection } from '../../core/library';
 import { relatedTags, smartViews, suggestCombos, topTags, uniqueByKey } from '../../core/tagGraph';
 import { requestHistoryPermission } from '../../core/usage';
@@ -14,9 +15,10 @@ import { bookmarkOps, openUrls } from '../../core/bookmarkSource';
 import { isAIReady } from '../../core/ai/client';
 import { aiTagBatch, buildTagContext, pickForTagging, planCommand, QUICK_COMMANDS } from '../../core/ai/tasks';
 import { applyActions, type RefMap, type ResolvedAction } from '../../core/ai/actions';
-import { folderTree, nowPicks, overviewCategories, resolveNav, sortItems, type Category, type NavContext, type SortMode } from '../../core/nav';
+import { descendantIds, folderTree, nowPicks, overviewCategories, resolveNav, sortItems, type Category, type NavContext, type SortMode } from '../../core/nav';
 import { isLoose } from '../../core/organize/organizer';
 import { executeMoves, undoLog } from '../../core/organize/executor';
+import { canMoveFolder, chromeFolderWriter, defaultNewFolderParent, moveFolder, moveToTop, shiftFolder } from '../../core/organize/folderOps';
 
 import CommandBar from './CommandBar';
 import ItemDrawer from './ItemDrawer';
@@ -33,6 +35,7 @@ import WidgetBoard from '../../widgets/WidgetBoard';
 import type { WidgetHost } from '../../widgets/types';
 import Menu, { type MenuItem } from '../../ui/Menu';
 import FolderPicker from '../../ui/FolderPicker';
+import PromptDialog from '../../ui/PromptDialog';
 import { spring } from '../../ui/motion';
 
 const PAGE = 120;
@@ -54,6 +57,7 @@ interface Toast { text: string; action?: { label: string; run: () => void } }
 
 const SmartHome: React.FC<{ onClassic: () => void }> = ({ onClassic }) => {
   const lib = useLibrary();
+  const cloud = useCloud(lib);
   const { settings } = useSettings();
   const ai = settings?.ai;
   const aiReady = isAIReady(ai);
@@ -75,6 +79,9 @@ const SmartHome: React.FC<{ onClassic: () => void }> = ({ onClassic }) => {
   const [modal, setModal] = useState<null | 'tags' | 'settings' | 'settings:ai' | 'organize'>(null);
   const [menu, setMenu] = useState<{ item: LibraryItem; x: number; y: number } | null>(null);
   const [moving, setMoving] = useState<LibraryItem[] | null>(null);
+  const [folderMenu, setFolderMenu] = useState<{ folder: FolderRecord; x: number; y: number } | null>(null);
+  const [movingFolder, setMovingFolder] = useState<FolderRecord | null>(null);
+  const [prompt, setPrompt] = useState<null | { kind: 'rename' | 'newFolder'; folder: FolderRecord }>(null);
   const [limit, setLimit] = useState(PAGE);
   const [variant, setVariant] = usePref<CardVariant>('ttab_variant', 'card');
   const [sort, setSort] = usePref<SortMode>('ttab_sort', 'smart');
@@ -223,9 +230,28 @@ const SmartHome: React.FC<{ onClassic: () => void }> = ({ onClassic }) => {
     const { log } = await executeMoves(list.map(it => ({
       bookmarkId: it.id, key: it.key, title: it.title, url: it.url, fromFolderId: it.parentId, fromPath: it.folderPath,
       toFolderId: folderId, toPath: folder?.path || [], reason: '手动移动', confidence: 1,
-    })), '2');
+    })), defaultNewFolderParent(lib.folders));
     setMoving(null);
+    if (!log.moves.length) { notify(list.length === 1 ? '它已经在这个文件夹里了' : '选中的书签已经都在这个文件夹里了'); return; }
     if (log.moves.length) notify(`已移动 ${log.moves.length} 个书签到「${folder?.title}」`, { label: '撤销', run: () => { void undoLog(log.id).then(() => notify('已移回原位置')); } });
+  };
+
+  /** 文件夹操作：成功后给出撤销 */
+  const withUndo = (r: { ok: boolean; reason?: string; undo?: { run: () => Promise<void> } }, done: string) => {
+    if (!r.ok) { notify(r.reason || '没有改变'); return; }
+    notify(done, r.undo && { label: '撤销', run: () => { void r.undo!.run().then(() => notify('已还原')); } });
+  };
+  const folderMenuItems = (f: FolderRecord): MenuItem[] => {
+    const topLevel = !f.parentId && f.path.length === 1;
+    return [
+      { label: '打开', icon: <ExternalLink size={15} />, onSelect: () => go(`folder:${f.id}`) },
+      { label: '新建子文件夹…', icon: <FolderPlus size={15} />, onSelect: () => setPrompt({ kind: 'newFolder', folder: f }) },
+      { divider: true, label: '' },
+      { label: '重命名…', icon: <Pencil size={15} />, disabled: topLevel, onSelect: () => setPrompt({ kind: 'rename', folder: f }) },
+      { label: '移动到…', icon: <FolderInput size={15} />, disabled: topLevel, onSelect: () => setMovingFolder(f) },
+      { label: '上移', icon: <ArrowUp size={15} />, disabled: topLevel, onSelect: () => { void shiftFolder(f.id, -1).then(r => withUndo(r, `已上移「${f.title}」`)); } },
+      { label: '下移', icon: <ArrowDown size={15} />, disabled: topLevel, onSelect: () => { void shiftFolder(f.id, 1).then(r => withUndo(r, `已下移「${f.title}」`)); } },
+    ];
   };
 
   const itemMenu = (item: LibraryItem): MenuItem[] => [
@@ -234,6 +260,7 @@ const SmartHome: React.FC<{ onClassic: () => void }> = ({ onClassic }) => {
     { label: '编辑标签与详情', icon: <Tags size={15} />, onSelect: () => setDrawerKey(item.key) },
     { label: '复制链接', icon: <Link2 size={15} />, onSelect: () => { void navigator.clipboard?.writeText(item.url).then(() => notify('已复制链接')); } },
     { label: '移动到文件夹…', icon: <FolderInput size={15} />, onSelect: () => setMoving([item]) },
+    { label: '在文件夹里置顶', icon: <ArrowUpToLine size={15} />, onSelect: () => { void moveToTop(item.id).then(r => (r.ok ? notify('已移到所在文件夹的最前面', r.undo && { label: '撤销', run: () => { void r.undo!.run().then(() => notify('已还原位置')); } }) : notify('它已经在最前面了'))); } },
     { label: selected.has(item.key) ? '取消选择' : '选择', icon: <CheckSquare size={15} />, hint: 'Shift+点击', onSelect: () => toggleSelect(item) },
     { divider: true, label: '' },
     { label: '从浏览器书签中删除', icon: <Trash2 size={15} />, danger: true, onSelect: () => { if (confirm(`从浏览器书签中删除「${item.title}」？`)) { void bookmarkOps.remove(item.id, false); notify('已删除书签'); } } },
@@ -365,6 +392,7 @@ const SmartHome: React.FC<{ onClassic: () => void }> = ({ onClassic }) => {
       onTagManager={() => setModal('tags')}
       onSettings={() => setModal('settings')}
       onClassic={onClassic}
+      onFolderMenu={(folder, x, y) => setFolderMenu({ folder, x, y })}
     />
   );
 
@@ -488,6 +516,7 @@ const SmartHome: React.FC<{ onClassic: () => void }> = ({ onClassic }) => {
 
       {/* 浮层 */}
       <AnimatePresence>
+        {folderMenu && <Menu key="fmenu" x={folderMenu.x} y={folderMenu.y} title={folderMenu.folder.title} items={folderMenuItems(folderMenu.folder)} onClose={() => setFolderMenu(null)} />}
         {menu && <Menu key="menu" x={menu.x} y={menu.y} title={menu.item.title} items={itemMenu(menu.item)} onClose={() => setMenu(null)} />}
         {selected.size > 0 && (
           <SelectionBar
@@ -521,8 +550,46 @@ const SmartHome: React.FC<{ onClassic: () => void }> = ({ onClassic }) => {
         )}
         {plan && <PlanPanel key="plan" plan={plan} onApply={applyPlan} onCancel={() => { planAbort.current?.abort(); setPlan(null); }} onRetry={() => askAI(plan.command)} />}
         {modal === 'tags' && <TagManager key="tm" items={lib.items} update={lib.update} onPick={t => go(`tag:${t}`)} onClose={() => setModal(null)} />}
-        {(modal === 'settings' || modal === 'settings:ai') && <SettingsModal key="settings" initial={modal === 'settings:ai' ? 'ai' : 'appearance'} onClassic={onClassic} onClose={() => setModal(null)} />}
+        {(modal === 'settings' || modal === 'settings:ai') && <SettingsModal key="settings" cloud={cloud} initial={modal === 'settings:ai' ? 'ai' : 'appearance'} onClassic={onClassic} onClose={() => setModal(null)} />}
         {modal === 'organize' && <OrganizePanel key="organize" items={lib.items} folders={lib.folders} index={sem.index} ai={ai} onClose={() => setModal(null)} notify={t => notify(t)} />}
+        {movingFolder && (
+          <FolderPicker
+            key="movef"
+            folders={lib.folders}
+            title={`移动文件夹「${movingFolder.title}」`}
+            subtitle="整个文件夹连同里面的书签一起移动，可以在提示里撤销"
+            confirmLabel="移动到这里"
+            value={movingFolder.parentId}
+            disabledIds={descendantIds(lib.folders, movingFolder.id)}
+            counts={new Map(folderTreeCounts(lib.folders, lib.items))}
+            onPick={id => {
+              const f = movingFolder; setMovingFolder(null);
+              const c = canMoveFolder(lib.folders, f.id, id);
+              if (!c.ok) { notify(c.reason); return; }
+              void moveFolder(lib.folders, f.id, id).then(r => withUndo(r, `已把「${f.title}」移动到「${lib.folders.find(x => x.id === id)?.title}」`));
+            }}
+            onClose={() => setMovingFolder(null)}
+          />
+        )}
+        {prompt && (
+          <PromptDialog
+            key="prompt"
+            title={prompt.kind === 'rename' ? '重命名文件夹' : `在「${prompt.folder.title}」里新建文件夹`}
+            label="名称"
+            initial={prompt.kind === 'rename' ? prompt.folder.title : ''}
+            confirmLabel={prompt.kind === 'rename' ? '重命名' : '新建'}
+            onClose={() => setPrompt(null)}
+            onSubmit={name => {
+              const p = prompt; setPrompt(null);
+              if (p.kind === 'rename') {
+                const old = p.folder.title;
+                void chromeFolderWriter.rename(p.folder.id, name).then(() => notify(`已重命名为「${name}」`, { label: '撤销', run: () => { void chromeFolderWriter.rename(p.folder.id, old).then(() => notify('已还原名称')); } }));
+              } else {
+                void chromeFolderWriter.create(name, p.folder.id).then(id => notify(`已新建「${name}」`, { label: '撤销', run: () => { void chrome.bookmarks.remove(id).then(() => notify('已撤销')); } }));
+              }
+            }}
+          />
+        )}
         {moving && (
           <FolderPicker
             key="move"

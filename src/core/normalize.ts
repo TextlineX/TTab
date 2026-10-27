@@ -63,6 +63,16 @@ const TAG_ALIASES: Record<string, string> = {
   tutorials: '教程',
 };
 
+/** 服务器下发的额外同义词（小写键 → 规范写法），用户开启云端比对后才会有 */
+let extraAliases: Record<string, string> = {};
+export function setExtraAliases(map: Record<string, string>) {
+  const clean: Record<string, string> = {};
+  for (const [k, v] of Object.entries(map || {})) {
+    if (typeof k === 'string' && typeof v === 'string' && k && v && k.length <= 24 && v.length <= 24) clean[k.toLowerCase()] = v;
+  }
+  extraAliases = clean;
+}
+
 /** 标签归一化：去掉 # 和多余空白，英文统一小写，同义词合并 */
 export function normalizeTag(raw: string): string {
   let t = (raw || '').trim().replace(/^#+/, '').replace(/\s+/g, ' ').trim();
@@ -70,6 +80,7 @@ export function normalizeTag(raw: string): string {
   if (t.length > 24) t = t.slice(0, 24);
   const lower = t.toLowerCase();
   if (TAG_ALIASES[lower]) return TAG_ALIASES[lower];
+  if (Object.prototype.hasOwnProperty.call(extraAliases, lower)) return extraAliases[lower];
   // 纯 ASCII 标签统一小写（AI 这类大写缩写已在别名表中保留）
   return /^[\x00-\x7f]+$/.test(t) ? lower : t;
 }

@@ -34,6 +34,8 @@ interface Props {
   onTagManager: () => void;
   onSettings: () => void;
   onClassic: () => void;
+  /** 文件夹右键 / 更多 */
+  onFolderMenu?: (folder: FolderNode['folder'], x: number, y: number) => void;
 }
 
 const VIEW_ICON: Record<SmartView['id'], React.ElementType> = { now: Clock3, frequent: Star, recent: CalendarPlus, untagged: Tag, duplicates: CopyX };
@@ -46,13 +48,15 @@ function useSectionOpen(id: string, initial = true): [boolean, () => void] {
 }
 
 const Row: React.FC<{
+  onContextMenu?: (e: React.MouseEvent) => void;
   k: string; active: string; collapsed: boolean; onSelect: (k: string) => void;
   icon: React.ReactNode; label: string; count?: number; depth?: number; tone?: 'warn'; trailing?: React.ReactNode;
-}> = ({ k, active, collapsed, onSelect, icon, label, count, depth = 0, tone, trailing }) => {
+}> = ({ k, active, collapsed, onSelect, icon, label, count, depth = 0, tone, trailing, onContextMenu }) => {
   const on = active === k;
   return (
     <button
       onClick={() => onSelect(k)}
+      onContextMenu={onContextMenu}
       title={collapsed ? `${label}${count !== undefined ? `（${count}）` : ''}` : undefined}
       aria-current={on ? 'page' : undefined}
       className={`relative w-full flex items-center gap-2.5 h-9 rounded-xl text-left text-[13.5px] transition-colors ${collapsed ? 'justify-center px-0' : 'px-2.5'} ${on ? 'text-fg' : 'text-muted hover:text-fg hover:bg-fill-1'}`}
@@ -90,18 +94,19 @@ const Section: React.FC<{ id: string; title: string; collapsed: boolean; count?:
   );
 };
 
-const FolderRows: React.FC<{ nodes: FolderNode[]; depth: number; active: string; collapsed: boolean; onSelect: (k: string) => void }> = ({ nodes, depth, active, collapsed, onSelect }) => {
+const FolderRows: React.FC<{ nodes: FolderNode[]; depth: number; active: string; collapsed: boolean; onSelect: (k: string) => void; onFolderMenu?: Props['onFolderMenu'] }> = ({ nodes, depth, active, collapsed, onSelect, onFolderMenu }) => {
   const [open, setOpen] = useState<Set<string>>(() => new Set());
   return (
     <>
-      {nodes.filter(n => n.total > 0).map(n => {
-        const hasKids = n.children.some(c => c.total > 0);
+      {nodes.map(n => {
+        const hasKids = n.children.length > 0;
         const isOpen = open.has(n.folder.id) || isGenericFolder(n.folder.title);
         return (
           <React.Fragment key={n.folder.id}>
             <Row
               k={`folder:${n.folder.id}`} active={active} collapsed={collapsed} onSelect={onSelect} depth={depth}
               icon={<Folder size={16} />} label={n.folder.title} count={n.total}
+              onContextMenu={e => { if (onFolderMenu) { e.preventDefault(); onFolderMenu(n.folder, e.clientX, e.clientY); } }}
               trailing={hasKids ? (
                 <span
                   role="button" tabIndex={-1} aria-label={isOpen ? '收起' : '展开'}
@@ -112,7 +117,7 @@ const FolderRows: React.FC<{ nodes: FolderNode[]; depth: number; active: string;
                 </span>
               ) : undefined}
             />
-            {hasKids && isOpen && !collapsed && <FolderRows nodes={n.children} depth={depth + 1} active={active} collapsed={collapsed} onSelect={onSelect} />}
+            {hasKids && isOpen && !collapsed && <FolderRows nodes={n.children} depth={depth + 1} active={active} collapsed={collapsed} onSelect={onSelect} onFolderMenu={onFolderMenu} />}
           </React.Fragment>
         );
       })}
@@ -121,7 +126,7 @@ const FolderRows: React.FC<{ nodes: FolderNode[]; depth: number; active: string;
 };
 
 /** 侧边栏：所有分类完整列出，带数量；可收起成图标栏 */
-const Sidebar: React.FC<Props> = ({ data, active, collapsed, onSelect, onToggleCollapsed, onOrganize, onTagManager, onSettings, onClassic }) => {
+const Sidebar: React.FC<Props> = ({ data, active, collapsed, onSelect, onToggleCollapsed, onOrganize, onTagManager, onSettings, onClassic, onFolderMenu }) => {
   const nowLabel = `${slotLabel(slotOf(new Date()))}常用`;
   const viewName = (id: SmartView['id']) => (id === 'now' ? nowLabel : { frequent: '常用', recent: '最近添加', untagged: '未打标签', duplicates: '重复书签' }[id]);
   const rowProps = { active, collapsed, onSelect };
@@ -170,7 +175,7 @@ const Sidebar: React.FC<Props> = ({ data, active, collapsed, onSelect, onToggleC
 
         {data.folders.length > 0 && (
           <Section id="folders" title="文件夹" collapsed={collapsed}>
-            <FolderRows nodes={data.folders} depth={0} {...rowProps} />
+            <FolderRows nodes={data.folders} depth={0} {...rowProps} onFolderMenu={onFolderMenu} />
           </Section>
         )}
 

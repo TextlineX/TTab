@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { createPortal } from 'react-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { X, Palette, Sparkles, Waypoints, Compass, Database, LayoutGrid, Info, ArrowRight } from 'lucide-react';
+import { X, Palette, Sparkles, Waypoints, Compass, Database, LayoutGrid, Info, ArrowRight, Cloud } from 'lucide-react';
 import { useSettings } from '../../state/useSettings';
 import { fade, pop, spring } from '../../ui/motion';
 import AppearanceSettings from './AppearanceSettings';
@@ -9,16 +9,19 @@ import AISettings from '../smart/AISettings';
 import EmbedSettings from '../smart/EmbedSettings';
 import SmartSettings from '../smart/SmartSettings';
 import DataSettings from '../smart/DataSettings';
+import CloudSettings from './CloudSettings';
+import type { CloudApi } from '../../state/useCloud';
 import { Group, Row } from './parts';
 import Button from '../../ui/Button';
 
-type Section = 'appearance' | 'ai' | 'embed' | 'smart' | 'data' | 'classic' | 'about';
+type Section = 'appearance' | 'ai' | 'embed' | 'smart' | 'cloud' | 'data' | 'classic' | 'about';
 
 const SECTIONS: { id: Section; label: string; desc: string; icon: React.ReactNode }[] = [
   { id: 'appearance', label: '外观', desc: '明暗、强调色、背景和字体', icon: <Palette size={17} /> },
   { id: 'ai', label: 'AI 助手', desc: '自动打标签、整理书签、自然语言查找', icon: <Sparkles size={17} /> },
   { id: 'embed', label: '语义向量', desc: '让相关推荐和搜索理解「意思」', icon: <Waypoints size={17} /> },
   { id: 'smart', label: '智能推荐', desc: '浏览历史、网页简介、自动归类', icon: <Compass size={17} /> },
+  { id: 'cloud', label: '云端与同步', desc: '账号、跨浏览器同步、社区标签比对', icon: <Cloud size={17} /> },
   { id: 'data', label: '数据', desc: '备份与在浏览器之间迁移', icon: <Database size={17} /> },
   { id: 'classic', label: '经典视图', desc: '原来的文件夹磁贴首页', icon: <LayoutGrid size={17} /> },
   { id: 'about', label: '快捷键与关于', desc: '', icon: <Info size={17} /> },
@@ -38,10 +41,11 @@ interface Props {
   onClose: () => void;
   onClassic?: () => void;
   initial?: Section;
+  cloud?: CloudApi;
 }
 
 /** 设置：左侧分区导航 + 右侧内容，每一行都是「左边说明，右边控件」 */
-const SettingsModal: React.FC<Props> = ({ onClose, onClassic, initial = 'appearance' }) => {
+const SettingsModal: React.FC<Props> = ({ onClose, onClassic, initial = 'appearance', cloud }) => {
   const { settings, update } = useSettings();
   const [section, setSection] = useState<Section>(initial);
   const current = SECTIONS.find(s => s.id === section)!;
@@ -100,6 +104,7 @@ const SettingsModal: React.FC<Props> = ({ onClose, onClassic, initial = 'appeara
                   {section === 'ai' && <AISettings value={settings.ai} onSave={ai => update({ ai })} />}
                   {section === 'embed' && <EmbedSettings value={settings.embed} chat={settings.ai} onSave={embed => update({ embed })} />}
                   {section === 'smart' && <SmartSettings />}
+                  {section === 'cloud' && <CloudSettings cloud={cloud} />}
                   {section === 'data' && <DataSettings />}
                   {section === 'classic' && (
                     <Group desc="经典视图按浏览器收藏夹的文件夹显示磁贴，适合习惯用文件夹的人。随时可以从左上角回到智能视图。">

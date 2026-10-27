@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "TTab - 灵动书签",
-  "version": "0.6.0",
+  "version": "0.7.0",
   "description": "会思考的书签新标签页：多标签、相关推荐、自动组合，可用 AI 一句话整理书签。",
   "permissions": [
     "bookmarks",

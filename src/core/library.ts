@@ -6,12 +6,27 @@ import { normalizeTag, uniqTags } from './normalize';
 import { nowScore, type UsageState } from './usage';
 import { inferRuleTags } from './ruleTagger';
 
-const SOURCE_RANK: Record<TagSource, number> = { manual: 3, ai: 2, rule: 1 };
+const SOURCE_RANK: Record<TagSource, number> = { manual: 4, ai: 3, cloud: 2, rule: 1 };
 
 const clonePage = (state: MetaState, key: string): PageMeta => {
   const p = state.pages[key];
   return p ? { ...p, tags: [...p.tags], removed: p.removed ? [...p.removed] : undefined } : { key, tags: [] };
 };
+
+/** 往一个（已克隆的）网页上加标签，原地修改 */
+function addToPage(page: PageMeta, clean: string[], source: TagSource) {
+  for (const name of clean) {
+    if (source !== 'manual' && page.removed?.includes(name)) continue;
+    const existing = page.tags.find(t => t.name === name);
+    if (existing) {
+      if (SOURCE_RANK[source] > SOURCE_RANK[existing.source]) existing.source = source;
+    } else {
+      page.tags.push({ name, source });
+    }
+    if (source === 'manual' && page.removed) page.removed = page.removed.filter(r => r !== name);
+  }
+  page.tags = page.tags.map(t => ({ ...t }));
+}
 
 /** 给多个网页加标签。自动来源（ai/rule）不会加回用户手动删除过的标签 */
 export function addTags(state: MetaState, keys: string[], tags: string[], source: TagSource): MetaState {
@@ -20,17 +35,7 @@ export function addTags(state: MetaState, keys: string[], tags: string[], source
   const pages = { ...state.pages };
   for (const key of keys) {
     const page = clonePage(state, key);
-    for (const name of clean) {
-      if (source !== 'manual' && page.removed?.includes(name)) continue;
-      const existing = page.tags.find(t => t.name === name);
-      if (existing) {
-        if (SOURCE_RANK[source] > SOURCE_RANK[existing.source]) existing.source = source;
-      } else {
-        page.tags.push({ name, source });
-      }
-      if (source === 'manual' && page.removed) page.removed = page.removed.filter(r => r !== name);
-    }
-    page.tags = page.tags.map(t => ({ ...t }));
+    addToPage(page, clean, source);
     pages[key] = page;
   }
   return { ...state, pages };
@@ -203,7 +208,7 @@ export function pruneOrphans(state: MetaState, records: BookmarkRecord[]): MetaS
 export function mergeMeta(base: MetaState, incoming: MetaState): MetaState {
   let state = base;
   for (const p of Object.values(incoming.pages || {})) {
-    for (const src of ['rule', 'ai', 'manual'] as TagSource[]) {
+    for (const src of ['rule', 'cloud', 'ai', 'manual'] as TagSource[]) {
       const names = p.tags.filter(t => t.source === src).map(t => t.name);
       if (names.length) state = addTags(state, [p.key], names, src);
     }
@@ -218,17 +223,20 @@ export function mergeMeta(base: MetaState, incoming: MetaState): MetaState {
   return state;
 }
 
-/** 给还没被规则处理过的书签自动打上规则标签（离线、瞬间完成） */
+/** 给还没被规则处理过的书签自动打上规则标签（离线、瞬间完成；一次性复制，5000 个书签也是毫秒级） */
 export function applyRuleTags(meta: MetaState, records: BookmarkRecord[]): MetaState {
-  let s = meta;
-  const done: string[] = [];
+  let pages: Record<string, PageMeta> | null = null;
   const seen = new Set<string>();
+  const at = Date.now();
   for (const r of records) {
     if (seen.has(r.key)) continue;
     seen.add(r.key);
-    if (s.pages[r.key]?.ruleTaggedAt) continue;
-    s = addTags(s, [r.key], inferRuleTags(r), 'rule');
-    done.push(r.key);
+    if (meta.pages[r.key]?.ruleTaggedAt) continue;
+    if (!pages) pages = { ...meta.pages };
+    const page = clonePage(meta, r.key);
+    addToPage(page, uniqTags(inferRuleTags(r)), 'rule');
+    page.ruleTaggedAt = at;
+    pages[r.key] = page;
   }
-  return done.length ? markTagged(s, done, 'rule') : s;
+  return pages ? { ...meta, pages } : meta;
 }
